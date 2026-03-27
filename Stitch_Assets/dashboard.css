@@ -1,0 +1,277 @@
+/* AEGIS Dashboard Styles */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+body {
+    background-color: #050505;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+}
+
+.crt-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.crt-overlay::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 0%, rgba(0, 255, 251, 0.08) 50%, rgba(18, 16, 16, 0) 100%);
+    background-size: 100% 120px;
+    z-index: 2;
+    pointer-events: none;
+    animation: v-scan 10s linear infinite;
+}
+
+@keyframes v-scan {
+    0% { transform: translateY(-120px); }
+    100% { transform: translateY(100vh); }
+}
+
+.cyber-border {
+    border: 1px solid #00FBFB;
+    box-shadow: 0 0 8px rgba(0, 251, 251, 0.2);
+}
+
+.cyber-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-track {
+    background: #0e0e0e;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-thumb {
+    background: #00FBFB;
+    box-shadow: 0 0 5px #00FBFB;
+}
+
+.pulse-red {
+    animation: pulse-red-anim 1.5s infinite;
+}
+
+@keyframes pulse-red-anim {
+    0% {
+        background-color: #93000a;
+        box-shadow: 0 0 0px #ffb4ab;
+    }
+
+    50% {
+        background-color: #ff0000;
+        box-shadow: 0 0 15px #ff0000;
+    }
+
+    100% {
+        background-color: #93000a;
+        box-shadow: 0 0 0px #ffb4ab;
+    }
+}
+
+.corner-bracket-tl {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid #00FBFB;
+    border-left: 2px solid #00FBFB;
+}
+
+.corner-bracket-br {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
+    border-bottom: 2px solid #00FBFB;
+    border-right: 2px solid #00FBFB;
+}
+
+.anomaly-glow {
+    box-shadow: 0 0 15px rgba(253, 144, 0, 0.4);
+}
+
+/* Geographic Pulsar System */
+#map { background: #080808; height: 100%; width: 100%; }
+.leaflet-container { background: #080808 !important; }
+.node-pulsar {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(0, 251, 251, 0.8);
+    box-shadow: 0 0 5px #00FBFB;
+    position: relative;
+}
+.node-pulsar::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid #00FBFB;
+    animation: map-pulsar 2s infinite linear;
+    opacity: 0;
+}
+.node-pulsar.infected {
+    background: rgba(255, 0, 60, 0.9);
+    box-shadow: 0 0 8px #FF0000;
+}
+.node-pulsar.infected::after { border-color: #FF0000; }
+@keyframes map-pulsar {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(3); opacity: 0; }
+}
+.leaflet-touch .leaflet-bar a { background-color: #00FBFB; color: #000; border: none; }
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out { font-weight: bold; }
+.leaflet-control-attribution { background: rgba(0,0,0,0.5) !important; color: #00FBFB !important; font-family: 'Space Grotesk', sans-serif !important; }
+.leaflet-popup-content-wrapper { background: #0a0a0a; color: #fff; border: 1px solid #00FBFB; font-family: 'JetBrains Mono', monospace; font-size: 10px; border-radius: 0; }
+.leaflet-popup-tip { background: #00FBFB; }
+
+.decoding-tooltip {
+    visibility: hidden;
+    position: absolute;
+    background: #050505;
+    border: 1px solid #00FBFB;
+    padding: 4px 8px;
+    font-size: 9px;
+    color: #00FBFB;
+    z-index: 60;
+    pointer-events: none;
+    box-shadow: 0 0 10px rgba(0, 251, 251, 0.3);
+    white-space: nowrap;
+}
+
+.hover-target:hover .decoding-tooltip {
+    visibility: visible;
+}
+
+@keyframes scan-glow {
+    0% {
+        text-shadow: 0 0 5px #ff003c;
+        opacity: 1;
+    }
+
+    50% {
+        text-shadow: 0 0 20px #ff003c;
+        opacity: 0.7;
+    }
+
+    100% {
+        text-shadow: 0 0 5px #ff003c;
+        opacity: 1;
+    }
+}
+
+.anomaly-scan {
+    animation: scan-glow 0.6s ease-in-out;
+}
+
+.threat-tooltip {
+    visibility: hidden;
+    width: 250px;
+    background-color: rgba(0, 0, 0, 0.95);
+    color: #fff;
+    text-align: center;
+    border: 1px solid #ff003c;
+    padding: 8px;
+    position: absolute;
+    z-index: 1000;
+    top: 60px;
+    left: 20px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.3);
+    pointer-events: none;
+    backdrop-filter: blur(4px);
+}
+
+.header-threat-container:hover .threat-tooltip {
+    visibility: visible;
+}
+
+.decoding-text::after {
+    content: "DECODING...";
+    animation: glitch-text 1.5s infinite linear;
+}
+
+@keyframes glitch-fx {
+    0% {
+        transform: translate(0);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+    }
+
+    15% {
+        transform: translate(-5px, 2px);
+        clip-path: polygon(0 15%, 100% 15%, 100% 30%, 0 30%);
+    }
+
+    30% {
+        transform: translate(5px, -2px);
+        clip-path: polygon(0 40%, 100% 40%, 100% 55%, 0 55%);
+    }
+
+    45% {
+        transform: translate(-2px, 5px);
+        clip-path: polygon(0 70%, 100% 70%, 100% 85%, 0 85%);
+    }
+
+    60% {
+        transform: translate(2px, -5px);
+        clip-path: polygon(0 0, 100% 0, 100% 10%, 0 10%);
+    }
+
+    75% {
+        transform: translate(-5px, -2px);
+        clip-path: polygon(0 85%, 100% 85%, 100% 100%, 0 100%);
+    }
+
+    100% {
+        transform: translate(0);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+    }
+}
+
+.glitch-active {
+    animation: glitch-fx 0.7s steps(2, end) forwards;
+    will-change: transform, clip-path;
+}
+
+@keyframes h3-flicker {
+
+    0%,
+    19.999%,
+    22%,
+    62.999%,
+    64%,
+    64.999%,
+    70%,
+    100% {
+        opacity: 1;
+    }
+
+    20%,
+    21.999%,
+    63%,
+    63.999%,
+    65%,
+    69.999% {
+        opacity: 0.8;
+    }
+}
+
+.flicker-h3 {
+    animation: h3-flicker 4s linear infinite;
+}

@@ -1,0 +1,31 @@
+# environment
+.env
+.env.production
+.venv/
+env/
+venv/
+
+# python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# datasets (Keep mission-critical seeds, but ignore ephemeral logs)
+**/*.log
+Backend_Repo/aegis_backend/uvicorn_*.log
+Backend_Repo/aegis_backend/heartbeat_debug.log
+
+# node
+node_modules/
+.npm
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
