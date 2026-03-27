@@ -21,7 +21,7 @@ services:
     name: aegis-dashboard
     env: static
     plan: free
-    publishDir: .
+    staticPublishDir: .
     headers:
       - path: /*
         name: Access-Control-Allow-Origin
