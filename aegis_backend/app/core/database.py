@@ -54,8 +54,14 @@ async def create_all_tables():
     import logging
     logger = logging.getLogger("aegis.db")
     
+    # Redacted URL for debugging
+    from urllib.parse import urlparse
+    parsed = urlparse(settings.DATABASE_URL_STR)
+    redacted_host = f"{parsed.hostname}:{parsed.port}" if parsed.hostname else "unknown-host"
+    
     max_retries = 5
     for attempt in range(1, max_retries + 1):
+        logger.info("Attempting connection to Database host: %s (attempt %d/%d)", redacted_host, attempt, max_retries)
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
