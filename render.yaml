@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     dockerContext: aegis_backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: aegis_backend/Dockerfile
     healthCheckPath: /api/health-check
     envVars:
       - key: DATABASE_URL
