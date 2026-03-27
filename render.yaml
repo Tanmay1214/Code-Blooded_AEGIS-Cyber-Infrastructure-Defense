@@ -3,7 +3,7 @@ services:
     name: aegis-api
     env: docker
     plan: free
-    region: singapore
+    region: oregon
     dockerContext: aegis_backend
     dockerfilePath: aegis_backend/Dockerfile
     healthCheckPath: /api/health-check
