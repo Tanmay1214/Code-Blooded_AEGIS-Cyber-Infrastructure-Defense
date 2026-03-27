@@ -43,6 +43,21 @@ async def get_db() -> AsyncSession:
 
 
 async def create_all_tables():
-    """Create all tables on startup (dev convenience; use Alembic in prod)."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Create all tables on startup with a retry loop to handle transient cloud DNS failures."""
+    import asyncio
+    import logging
+    logger = logging.getLogger("aegis.db")
+    
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables verified successfully.")
+            return
+        except Exception as e:
+            if attempt == max_retries:
+                logger.error("Final database connection attempt failed: %s", e)
+                raise
+            logger.warning("Database connection attempt %d/%d failed (DNS/Handshake). Retrying in 5s... Error: %s", attempt, max_retries, e)
+            await asyncio.sleep(5)
