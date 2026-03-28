@@ -13,7 +13,6 @@ pydantic
 pydantic-settings
 python-multipart
 httpx
-requests
 pytest
 pytest-asyncio
 faker

@@ -15,17 +15,6 @@ services:
       - key: APP_NAME
         value: "AEGIS Defense System [RENDER]"
 
-  - type: worker
-    name: aegis-heartbeat
-    env: python
-    region: oregon
-    plan: starter # Background workers usually require a paid plan
-    buildCommand: "pip install -r aegis_backend/requirements.txt"
-    startCommand: "cd aegis_backend && python scripts/heartbeat.py"
-    envVars:
-      - key: API_BASE
-        value: "https://aegis-api-65i8.onrender.com/api"
-
 databases:
   - name: aegis-db
     plan: free
