@@ -38,17 +38,11 @@ This guide walks you through deploying the AEGIS system manually, from setting u
 ### Prerequisites
 - Python 3.10+
 - Git
-- Accounts on **Render.com** (PostgreSQL hosting) and **Upstash.com** (Redis hosting).
+---
 
 ---
 
-### Step 1: Provision Cloud Resources ☁️
-1. **Database:** Head to Render and deploy a free **PostgreSQL** instance. Choose `Oregon` (US-West) as the region for optimal latency. Note your **External Database URL**.
-2. **Redis:** Head to Upstash and deploy a free **Redis** database. Note the connection URL (starting with `rediss://`).
-
----
-
-### Step 2: Clone & Configure Environment 🔐
+### Step 1: Clone & Configure Environment 🔐
 
 1. Clone the repository:
    ```bash
@@ -64,18 +58,21 @@ This guide walks you through deploying the AEGIS system manually, from setting u
 
    **Example `.env` content:**
    ```env
-   # Your Render External PostgreSQL URL
-   DATABASE_URL="postgresql://user:pass@render-hostname.com/db_name"
-   
-   # Your Upstash Redis URL
-   REDIS_URL="rediss://default:password@upstash-hostname.io:6379"
-   
-   APP_NAME="AEGIS Defense System [LOCAL]"
-   APP_VERSION="1.0.0"
+   DATABASE_URL="postgresql://aegis_db_5o8g_user:dK8r3ilL2UcH4nVjVh8VfYIH7LdUM8cW@dpg-d73bbsfkijhs73debtrg-a.oregon-postgres.render.com/aegis_db_5o8g"
+
+   # Use your Upstash Redis URL for the forensic heartbeat cache:
+   REDIS_URL="redis-cli --tls -u redis://default:gQAAAAAAAVBaAAIncDE0MzJjM2RhZDdlOTM0NDQxOTRjOWMzNTE5OGY1Y2ZkNHAxODYxMDY@meet-teal-86106.upstash.io:6379"
+
+   # --- Local Intelligence Settings ---
    DEBUG=true
+   APP_NAME="AEGIS Defense System [LOCAL_SECTOR]"
+   APP_VERSION="1.0.0"
+
+   #    --- ML Thresholds ---
    ANOMALY_THRESHOLD=0.0
    ISOLATION_FOREST_CONTAMINATION=0.08
-   
+
+   # --- Paths (Default for Aegis_backend structure) ---
    NODE_REGISTRY_PATH="data/node_registry.csv"
    SYSTEM_LOGS_PATH="data/system_logs.csv"
    SCHEMA_CONFIG_PATH="data/schema_config.csv"
@@ -83,7 +80,7 @@ This guide walks you through deploying the AEGIS system manually, from setting u
 
 ---
 
-### Step 3: Initialize the Database (Surgical Reset & Seed) 🧹
+### Step 2: Initialize the Database (Surgical Reset & Seed) 🧹
 For a 100% clean mission, wipe the tables and rebuild the data registry from scratch.
 
 *Ensure you are actively inside the `aegis_backend` directory.*
@@ -110,7 +107,7 @@ python scripts/calibrate_sequences.py
 
 ---
 
-### Step 4: Engage the Mission Backend 🛰️
+### Step 3: Engage the Mission Backend 🛰️
 Start the FastAPI server. This will also trigger the self-sustaining 24/7 **Autonomous Pulse**.
 
 ```bash
@@ -120,7 +117,7 @@ uvicorn main:app --reload
 
 ---
 
-### Step 5: Launch the Cyberpunk Dashboard 💻
+### Step 4: Launch the Cyberpunk Dashboard 💻
 You can launch the frontend using any basic HTTP server from the root of the project.
 
 Open a new terminal session, ensuring you are in the **Root Project Folder**:
