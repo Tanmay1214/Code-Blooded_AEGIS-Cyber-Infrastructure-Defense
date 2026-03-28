@@ -69,7 +69,7 @@ if (typeof tailwind !== 'undefined') {
 // 2. Core State & Fetching
 const API_BASE = window.location.origin.includes('localhost') 
     ? "http://localhost:8000/api" 
-    : window.location.origin.replace('dashboard-aegis', 'aegis-api') + "/api"; // Tuned for Render blueprint subdomains
+    : "https://aegis-api-65i8.onrender.com/api"; 
 let dashboardData = null;
 let visibleNodeLimit = 50;
 
@@ -275,6 +275,14 @@ function updateUI() {
 
     const tooltip = document.querySelector('.threat-tooltip');
     if (tooltip) tooltip.innerText = `${threatCount} Infected Nodes | ${criticalNodes.length} Latency Spikes`;
+
+    const heatmapStatus = document.getElementById('heatmapStatus');
+    if (heatmapStatus && dashboardData.metadata.latest_log_timestamp) {
+        const date = new Date(dashboardData.metadata.latest_log_timestamp);
+        const timeStr = date.toLocaleTimeString('en-US', { hour12: false });
+        const ms = date.getMilliseconds().toString().padStart(3, '0');
+        heatmapStatus.innerText = `LAST_INGESTION: ${timeStr}.${ms}`;
+    }
 
     const activeSchema = document.getElementById('activeSchema');
     const schemaVersionBadge = document.getElementById('schemaVersionBadge');

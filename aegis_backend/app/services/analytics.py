@@ -381,6 +381,7 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
     return DashboardAggregationResponse(
         metadata=DashboardMetadata(
             system_time=int(datetime.now().timestamp()),
+            latest_log_timestamp=latest_logs[0].ingested_at.isoformat() if latest_logs and latest_logs[0].ingested_at else _now().isoformat(),
             total_logs_processed=total_logs,
             active_threats=active_threats,
             total_anomalies=total_anomalies,

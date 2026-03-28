@@ -4,7 +4,9 @@ import random
 import pandas as pd
 from pathlib import Path
 
-API_BASE = "http://127.0.0.1:8000/api"
+import os
+
+API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000/api")
 LOGS_CSV = "data/system_logs.csv"
 
 def get_nodes():

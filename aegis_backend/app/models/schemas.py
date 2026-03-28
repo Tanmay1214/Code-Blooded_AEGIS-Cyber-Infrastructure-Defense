@@ -151,6 +151,7 @@ class HealthResponse(BaseModel):
 
 class DashboardMetadata(BaseModel):
     system_time: int
+    latest_log_timestamp: str | None = None
     total_logs_processed: int
     active_threats: int
     total_anomalies: int
