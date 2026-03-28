@@ -22,6 +22,18 @@ AEGIS (Autonomous Experimental Grid Intelligence System) is a complete full-stac
 
 ---
 
+## 📸 Visual Interface
+
+### 🌀 1. AEGIS Initial Boot Sequence (Landing)
+The sequence begins with an immersive terminal-style boot-up, featuring staggered animations and a typewriter effect as the AEGIS Core initializes.
+![AEGIS Landing Screen](aegis_backend/assets/screenshots/landing.png)
+
+### 🛰️ 2. High-Velocity Forensic Dashboard
+Once launched, the operator is granted access to the real-time telemetry suite, featuring node maps, anomaly heatmaps, and a 100 log/sec ingestion stream.
+![AEGIS Forensic Dashboard](aegis_backend/assets/screenshots/dashboard.png)
+
+---
+
 ## 🧠 Deep Dive: The Backend Intelligence (`aegis_backend`)
 
 The `aegis_backend` is the asynchronous "Brain" of the entire application. Built primarily with Python 3.10+ and FastAPI, it is engineered to process massive telemetry logs (**100 logs/sec**), hunt for cybersecurity anomalies using Machine Learning, and serve data to the frontend in real-time.
