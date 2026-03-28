@@ -22,6 +22,27 @@ AEGIS (Autonomous Experimental Grid Intelligence System) is a complete full-stac
 
 ---
 
+## 🧠 Deep Dive: The Backend Intelligence (`aegis_backend`)
+
+The `aegis_backend` is the asynchronous "Brain" of the entire application. Built primarily with Python 3.10+ and FastAPI, it is engineered to process massive telemetry logs, hunt for cybersecurity anomalies using Machine Learning, and serve data to the frontend in real-time.
+
+### 1. The Autonomous Pulse Generator (`app/services/pulse.py`)
+Instead of relying on external cron jobs, paid scripts, or manual triggers, this backend features a self-sustaining in-process background worker. Every few seconds, it reads from the raw forensic CSV data and dynamically streams batches of telemetry into PostgreSQL. This guarantees a true **Zero-Cost 24/7 Live Feed**.
+
+### 2. The Machine Learning Engine (`app/ml/detector.py`)
+During data insertion, the stream is continuously evaluated by the Anomaly Detection Engine:
+- **XGBoost Classifier**: Scans the payload for known threat patterns (Supervised).
+- **Isolation Forest**: Hunts for bizarre behavior and outliers (Unsupervised).
+Logs with highly abnormal `response_time_ms` or `load_val` metrics are flagged as "ANOMALY" and intercepted into a dedicated threat table.
+
+### 3. Forensic Ingestion & Schema Rotation (`app/services/ingestion.py`)
+Real-world cybersecurity data structures evolve dynamically. To simulate this, the ingest engine monitors the data stream for **Schema Evolution**. It automatically determines if an incoming packet requires the "V1" or "V2" schema structure and formats it properly before database insertion—without dropping a single frame.
+
+### 4. Asynchronous Resilience (`app/core/database.py`)
+Powered by `SQLAlchemy` combined with the `asyncpg` driver, the API is entirely non-blocking. To harden the system for cloud deployments, the database initialization features a robust 5-attempt retry-backoff handshake to survive transient cloud DNS latency.
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Backend:** Python, FastAPI, SQLAlchemy (Async), Uvicorn, Pandas, Scikit-Learn, XGBoost.
