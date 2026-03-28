@@ -10,7 +10,8 @@ settings = get_settings()
 
 # Standard asyncpg SSL logic for production (Render/Managed DB)
 connect_args = {}
-if "localhost" not in settings.DATABASE_URL_STR and "127.0.0.1" not in settings.DATABASE_URL_STR:
+# Only force SSL if NOT running on localhost or inside the standard Docker 'postgres' network
+if all(h not in settings.DATABASE_URL_STR for h in ["localhost", "127.0.0.1", "postgres"]):
     connect_args["ssl"] = True
 
 engine = create_async_engine(

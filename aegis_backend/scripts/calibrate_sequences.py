@@ -27,8 +27,10 @@ async def calibrate():
     elif database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
-    # SSL for Render
-    connect_args = {"ssl": True} if "localhost" not in database_url else {}
+    # SSL Intelligence: Only force SSL if NOT on local machine or standard Docker network
+    connect_args = {}
+    if all(h not in database_url for h in ["localhost", "127.0.0.1", "postgres"]):
+        connect_args["ssl"] = True
 
     engine = create_async_engine(database_url, connect_args=connect_args)
 
