@@ -56,7 +56,7 @@ This guide walks you through deploying the AEGIS system manually, from setting u
    # Create a `.env` file and insert the following:
    ```
 
-   **Example `.env` content:**
+   **Use this `.env` content:**
    ```env
    DATABASE_URL="postgresql://aegis_db_5o8g_user:dK8r3ilL2UcH4nVjVh8VfYIH7LdUM8cW@dpg-d73bbsfkijhs73debtrg-a.oregon-postgres.render.com/aegis_db_5o8g"
 
