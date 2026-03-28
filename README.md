@@ -66,7 +66,8 @@ Raw Telemetry
 The sequence begins with an immersive terminal-style boot-up, featuring staggered animations and a typewriter effect as the AEGIS Core initializes.
 ![AEGIS Landing Screen](aegis_backend/assets/screenshots/landing.png)
 ### 🛰️ 2. High-Velocity Forensic Dashboard
-Once launched, the operator is granted access to the real-time telemetry suite, featuring node maps, anomaly heatmaps, and a 100 log/sec ingestion stream.
+-
+ Once launched, the operator is granted access to the real-time telemetry suite, featuring node maps, anomaly heatmaps, and a 100 log/sec ingestion stream.
 ![AEGIS Forensic Dashboard](aegis_backend/assets/screenshots/dashboard.png)
 ---
 ## 🛠️ Tech Stack
