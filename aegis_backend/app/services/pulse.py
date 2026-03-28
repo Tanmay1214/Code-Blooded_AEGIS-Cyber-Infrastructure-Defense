@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.core.database import SessionLocal
+from app.core.database import AsyncSessionLocal
 from app.models.orm import SystemLog, AnomalyRecord
 from app.core.config import get_settings
 
@@ -54,7 +54,7 @@ async def forensic_autonomous_pulse(app):
             batch_data = []
             
             # Determine current log_id offset to handle schema rotation
-            async with SessionLocal() as session:
+            async with AsyncSessionLocal() as session:
                 max_id_res = await session.execute(select(func.max(SystemLog.log_id)))
                 current_max_id = (max_id_res.scalar() or 0)
             
@@ -85,7 +85,7 @@ async def forensic_autonomous_pulse(app):
                 batch_data.append(log_dict)
             
             # 1. DB Bulk Insert
-            async with SessionLocal() as session:
+            async with AsyncSessionLocal() as session:
                 # Remove internal _eff_load before SQL insert
                 sql_data = []
                 for d in batch_data:
