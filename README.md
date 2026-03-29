@@ -21,18 +21,18 @@
    Optimized bandwidth usage by transmitting heavy node metadata once per handshake, then shifting to a lightweight "Heartbeat" protocol for 100 log/sec dashboard reactivity.
 6. **Master Forensic PDF Reporting** 📄
    Integrated `jspdf` and `jspdf-autotable` to allow one-click forensic report generation for the **Asset Registry** and **Threat Heatmap**, turning live telemetry into court-ready evidence.
+7. **JWT Operator Authentication** 🔐
+   All sensitive endpoints are secured behind JWT Bearer token authentication. Operators must authenticate via the login terminal before gaining access to the dashboard and forensic data.
 
 ---
 
 ## 🏗️ Architecture
-
 ```
 Data Sources  →  Ingestion Layer      →  Processing Layer  →  Detection Brain        →  Storage      →  API Layer
 (CSVs/Stream)    (FastAPI + Pipeline)     (Pandas/Polars)      (Rules + IsoForest)      (PG + Redis)    (FastAPI)
 ```
 
 ### Detection Stack
-
 ```
 Raw Telemetry
      │
@@ -76,6 +76,11 @@ Raw Telemetry
 
 ## 📸 Visual Interface
 
+### 🔐 0. AEGIS Secure Login Terminal
+Operators must authenticate before accessing any forensic data. The login terminal features the same cyberpunk aesthetic as the dashboard — CRT overlay, neon cyan styling, and corner bracket framing.
+- **Username:** `admin`
+- **Password:** `aegis123`
+
 ### 🌀 1. AEGIS Initial Boot Sequence (Landing)
 The sequence begins with an immersive terminal-style boot-up, featuring staggered animations and a typewriter effect as the AEGIS Core initializes.
 ![AEGIS Landing Screen](aegis_backend/assets/screenshots/landing.png)
@@ -88,7 +93,7 @@ Once launched, the operator is granted access to the real-time telemetry suite, 
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Python, FastAPI, SQLAlchemy (Async), Uvicorn, Scikit-Learn, XGBoost.
+- **Backend:** Python, FastAPI, SQLAlchemy (Async), Uvicorn, Scikit-Learn, XGBoost, python-jose (JWT).
 - **Frontend:** Vanilla HTML5, CSS3, JavaScript (Fetch API).
 - **Database:** PostgreSQL (Render Managed Provider / Local Docker).
 - **Cache:** Redis (Upstash / Local Docker).
@@ -115,13 +120,20 @@ python scripts/train_model.py
 exit
 ```
 
+### 2.5. Operator Login
+Once the dashboard is live, navigate to `login.html` first.
+- **Username:** `admin`
+- **Password:** `aegis123`
+
+On success, you will be redirected to the main dashboard automatically.
+
 ### 3. Launch the Dashboard
 Launch the frontend from the **Root Project Folder**:
 ```bash
 # On your host machine (root folder)
 python -m http.server 8080
 ```
-Open current dash at: `https://aegis-api-65i8.onrender.com/` or locally at `http://localhost:8080/dashboard.html`
+Open current dash at: `https://aegis-api-65i8.onrender.com/` or locally at `http://localhost:8080/login.html`
 
 ---
 
@@ -130,6 +142,7 @@ Open current dash at: `https://aegis-api-65i8.onrender.com/` or locally at `http
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | System health — DB, Redis, ML model status |
+| POST | `/api/login` | JWT authentication — returns bearer token (`username: admin`, `password: aegis123`) |
 | GET | `/api/nodes` | All 500 nodes with decoded serial numbers (**Supports PDF Export**) |
 | GET | `/api/dashboard-aggregator` | **Master Pulse**: Unified state for the Cyberpunk UI |
 | GET | `/api/city-map` | All nodes colored by TRUE HTTP status (not JSON label) |
@@ -163,6 +176,17 @@ Node serials are Base64-encoded and hidden inside the `user_agent` field. Decode
 - **Rule Engine**: Fast, explainable catches for known patterns (DDoS, mismatches).
 - **ML Brain**: `IsolationForest` catches unknown outliers in response time and load.
 
+### 5. JWT Authentication Layer
+All sensitive endpoints are protected via JWT Bearer tokens using OAuth2PasswordBearer.
+
+- **Login:** `POST /api/login` with form credentials (`username: admin`, `password: aegis123`) returns a signed JWT token (1hr expiry)
+- **Protected routes:** `/api/nodes`, `/api/anomalies`, `/api/heatmap`, `/api/dashboard-aggregator` — all require `Authorization: Bearer <token>` header
+- **Frontend:** `login.html` is the entry point. On successful auth, token is stored in `localStorage` and the operator is granted dashboard access
+- **Logout:** Clears token from `localStorage` and redirects to `login.html`
+
+### 6. Backend Startup Failsafe
+The backend is hardened against DB unavailability at startup. If PostgreSQL is unreachable during boot, the server starts in **fallback mode** — ML models still load, the autonomous pulse still initializes, and routes come up. DB-dependent routes degrade gracefully at request time rather than crashing the entire process.
+
 ---
 
 ## 📊 Dataset Intelligence
@@ -181,6 +205,8 @@ Node serials are Base64-encoded and hidden inside the `user_agent` field. Decode
 
 ## 🌐 Live Demo
 Frontend: [aegis-cyber-infrastructure-defense.vercel.app](https://aegis-cyber-infrastructure-defense.vercel.app)
+
+> Access via the login page. Credentials: `admin` / `aegis123`
 
 > [!WARNING]
 > **Infrastructure Notice:** The live backend is hosted on Render's Free Tier. Resources are limited; you may experience cold-start latency.
