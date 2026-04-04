@@ -135,6 +135,7 @@ async def get_heatmap(session: AsyncSession) -> HeatmapResponse:
             func.avg(SystemLog.response_time_ms).label("avg_rt"),
             func.max(SystemLog.response_time_ms).label("max_rt"),
             func.count(SystemLog.log_id).label("log_count"),
+            # Guard percentile_cont for empty groups
             func.percentile_cont(0.95)
                 .within_group(SystemLog.response_time_ms)
                 .label("p95_rt"),
@@ -142,7 +143,8 @@ async def get_heatmap(session: AsyncSession) -> HeatmapResponse:
         .where(SystemLog.log_id >= window_start)
         .group_by(SystemLog.node_id)
     )
-    agg_rows = (await session.execute(agg_stmt)).fetchall()
+    agg_result = await session.execute(agg_stmt)
+    agg_rows = agg_result.fetchall() if agg_result else []
 
     # 3. Anomaly hits per node in window
     anomaly_stmt = (
@@ -360,14 +362,19 @@ async def get_threat_scores(session: AsyncSession) -> ThreatScoreResponse:
     entries = []
     
     for node_id, logs in node_data.items():
-        rt_list = [log.response_time_ms for log in logs]
-        if len(rt_list) > 1:
-            variance = statistics.variance(rt_list)
-        else:
+        # High-Purity Shield: Filter out None values from rt_list
+        rt_list = [log.response_time_ms for log in logs if log.response_time_ms is not None]
+        
+        try:
+            if len(rt_list) > 1:
+                variance = statistics.variance(rt_list)
+            else:
+                variance = 0.0
+        except (statistics.StatisticsError, TypeError):
             variance = 0.0
 
-        logs_sorted = sorted(logs, key=lambda x: x.ingested_at)
-        time_diff = (logs_sorted[-1].ingested_at - logs_sorted[0].ingested_at).total_seconds()
+        logs_sorted = sorted(logs, key=lambda x: x.ingested_at) if logs else []
+        time_diff = (logs_sorted[-1].ingested_at - logs_sorted[0].ingested_at).total_seconds() if len(logs_sorted) > 1 else 0.0
         
         if time_diff > 0:
             lps = len(logs) / time_diff
@@ -447,18 +454,15 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
     nodes_stmt = select(Node)
     nodes_rows = (await session.execute(nodes_stmt)).scalars().all()
     
-    # Latest status for each node
-    latest_logs_subq = (
-        select(
-            SystemLog.node_id,
-            func.max(SystemLog.log_id).label("max_id")
-        ).group_by(SystemLog.node_id).subquery()
+    # Optimized: Get the latest log for each node using DISTINCT ON (Postgres-specific power)
+    # This leverages the ix_system_logs_node_log index (node_id, log_id)
+    status_stmt = (
+        select(SystemLog)
+        .distinct(SystemLog.node_id)
+        .order_by(SystemLog.node_id, SystemLog.log_id.desc())
     )
-    status_stmt = select(SystemLog).join(
-        latest_logs_subq, 
-        (SystemLog.node_id == latest_logs_subq.c.node_id) & (SystemLog.log_id == latest_logs_subq.c.max_id)
-    )
-    statuses = {s.node_id: s for s in (await session.execute(status_stmt)).scalars().all()}
+    statuses_result = await session.execute(status_stmt)
+    statuses = {s.node_id: s for s in statuses_result.scalars().all()}
 
     # 2. Identify nodes with anomalies in the current window (Hard-Sync)
     inf_nodes_stmt = select(func.distinct(AnomalyRecord.node_id)).where(AnomalyRecord.log_id >= window_start_id)
@@ -491,17 +495,21 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
     heatmap_data = await get_heatmap(session)
     serialized_heatmap = [e.model_dump() for e in heatmap_data.entries[:30]] # top 30 risk
 
-    # 5. Terminal Logs (Filtered for Light Mode)
+    # Terminal Logs (Filtered for Light Mode)
     limit_logs = 50 if full else 10
     logs_stmt = select(SystemLog).order_by(SystemLog.log_id.desc()).limit(limit_logs)
     latest_logs = (await session.execute(logs_stmt)).scalars().all()
+    
+    # 5. Metadata Construction
+    latest_log_ts = latest_logs[0].ingested_at.isoformat() if (latest_logs and len(latest_logs) > 0 and latest_logs[0].ingested_at) else _now().isoformat()
+    
     terminal_logs = [
         LogEntry(
             id=l.log_id,
             timestamp=l.ingested_at.isoformat() if l.ingested_at else _now().isoformat(),
             node_id=l.node_id,
             message=f"Forensic Packet Recv: {l.http_response_code} | RT={l.response_time_ms}ms",
-            status=l.http_status_label,
+            status=getattr(l, 'http_status_label', 'UNKNOWN'),
             http_code=l.http_response_code
         ) for l in latest_logs
     ]
@@ -509,7 +517,7 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
     return DashboardAggregationResponse(
         metadata=DashboardMetadata(
             system_time=int(datetime.now().timestamp()),
-            latest_log_timestamp=latest_logs[0].ingested_at.isoformat() if latest_logs and latest_logs[0].ingested_at else _now().isoformat(),
+            latest_log_timestamp=latest_log_ts,
             total_logs_processed=current_max_id,
             active_threats=active_threats,
             total_anomalies=total_anomalies,

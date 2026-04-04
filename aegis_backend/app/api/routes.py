@@ -372,7 +372,7 @@ async def cloned_identities(session: AsyncSession = Depends(get_db)):
     return await detect_cloned_identities(session)
 
 
-@router.get("/dashboard-aggregator", response_model=DashboardAggregationResponse, tags=["Analytics"], response_model_exclude_none=True)
+@router.get("/dashboard-aggregator", response_model=None, tags=["Analytics"])
 async def dashboard_aggregator(
     full: bool = Query(False),
     session: AsyncSession = Depends(get_db),
@@ -381,9 +381,18 @@ async def dashboard_aggregator(
     """
     Unified dashboard state for the Cyberpunk UI.
     Aggregates metadata, schema, nodes, heatmap, and logs.
-    Set full=true to receive static node metadata (positions, serials).
     """
-    return await get_dashboard_state(session, full=full)
+    try:
+        from fastapi.responses import JSONResponse
+        data = await get_dashboard_state(session, full=full)
+        # Manually validate to see Pydantic error
+        return JSONResponse(content=data.model_dump(mode="json"))
+    except Exception as e:
+        import traceback
+        error_msg = f"AGGREGATOR SECTOR-FAIL: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        print(error_msg)
+        return JSONResponse(status_code=500, content={"detail": str(e), "traceback": traceback.format_exc()})
 
 
 # ─── Simulation ───────────────────────────────────────────────────────────────
