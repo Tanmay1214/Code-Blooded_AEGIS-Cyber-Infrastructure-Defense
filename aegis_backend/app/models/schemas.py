@@ -16,6 +16,8 @@ class NodeOut(BaseModel):
     serial_number: str          # Base64-decoded SN-XXXX
     user_agent: str
     is_infected: bool
+    is_quarantined: bool
+    quarantine_reason: str | None = None
 
 
 class NodeStatusOut(BaseModel):
@@ -26,6 +28,8 @@ class NodeStatusOut(BaseModel):
     last_response_time_ms: int
     true_status: str            # HEALTHY / PARTIAL / THROTTLED / CRITICAL
     json_status: str            # always "OPERATIONAL" — the lie
+    is_quarantined: bool
+    quarantine_reason: str | None = None
     active_schema_version: int
     effective_load: float | None
 
@@ -128,16 +132,6 @@ class BulkLogIngestResponse(BaseModel):
     message: str
 
 
-class BulkLogIngestRequest(BaseModel):
-    logs: list[LogIngestRequest]
-
-
-class BulkLogIngestResponse(BaseModel):
-    ingested_count: int
-    anomalies_detected: int
-    message: str
-
-
 # ─── Health ───────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
@@ -148,6 +142,8 @@ class HealthResponse(BaseModel):
     total_nodes: int
     total_logs: int
 
+
+# ─── Dashboard ────────────────────────────────────────────────────────────────
 
 class DashboardMetadata(BaseModel):
     system_time: int
@@ -169,6 +165,7 @@ class DashboardNode(BaseModel):
     id: int
     pos: dict | None = None
     is_infected: bool
+    is_quarantined: bool = False
     conflict_detected: bool
     last_http_code: int
     reported_json: str
@@ -191,3 +188,28 @@ class DashboardAggregationResponse(BaseModel):
     nodes: list[DashboardNode] | None = None
     heatmap: list[dict]
     terminal_logs: list[LogEntry]
+
+
+# ─── Simulation ───────────────────────────────────────────────────────────────
+
+class ThreatInjectionRequest(BaseModel):
+    node_id: int
+    threat_type: Literal["DDOS", "LATENCY", "MALWARE"]
+    intensity: float = Field(0.9, ge=0.0, le=1.0)
+
+
+# ─── Threat Score Engine ──────────────────────────────────────────────────────
+
+class ThreatScoreEntry(BaseModel):
+    node_uuid: int
+    serial_number: str
+    threat_score: float  # 0.0 to 1.0
+    jitter_variance: float
+    logs_per_second: float
+    status_multiplier: float
+
+
+class ThreatScoreResponse(BaseModel):
+    active_nodes: int
+    scores: list[ThreatScoreEntry]
+    generated_at: datetime

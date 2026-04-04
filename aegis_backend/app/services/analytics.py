@@ -1,12 +1,16 @@
 """
 app/services/analytics.py
-Business logic for the four dashboard features:
+Business logic for the dashboard features:
   1. Forensic City Map     — nodes colored by true HTTP status
   2. Sleeper Heatmap       — API response time anomaly ranking
   3. Dynamic Schema Console — active schema version tracking
   4. Asset Registry        — decoded serial numbers table
+  5. Threat Score          — operational threat probability
+  6. Unified Dashboard     — aggregated state for the cyberpunk UI
 """
 import logging
+import statistics
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import select, func, text
@@ -19,9 +23,10 @@ from app.models.schemas import (
     SchemaConsoleEntry, SchemaConsoleResponse,
     NodeOut, NodeStatusOut,
     AnomalyOut, AnomalySummary,
+    ThreatScoreEntry, ThreatScoreResponse,
     DashboardAggregationResponse, DashboardMetadata, SchemaEngineState, DashboardNode, LogEntry,
 )
-from app.core.cache import cache_get, cache_set, CACHE_CITY_MAP, CACHE_HEATMAP
+from app.core.cache import cache_get, cache_set, CACHE_CITY_MAP, CACHE_HEATMAP, CACHE_THREAT_SCORE
 
 logger = logging.getLogger("aegis.analytics")
 
@@ -113,7 +118,7 @@ async def get_heatmap(session: AsyncSession) -> HeatmapResponse:
     Aggregated response-time statistics per node.
     Nodes with high latency / many anomaly hits = hidden malware candidates.
     """
-    # Bypass cache for real-time demo-performance
+    # Bypass cache for real-time demo-performance in production if needed
     # cached = await cache_get(CACHE_HEATMAP)
     # if cached:
     #     return HeatmapResponse(**cached)
@@ -263,6 +268,8 @@ async def get_node_status(session: AsyncSession, node_id: int) -> NodeStatusOut 
         node_uuid=node.node_uuid,
         serial_number=node.serial_number,
         is_infected=node.is_infected,
+        is_quarantined=node.is_quarantined,
+        quarantine_reason=node.quarantine_reason,
         last_http_code=latest_log.http_response_code,
         last_response_time_ms=latest_log.response_time_ms,
         true_status=latest_log.http_status_label,
@@ -301,7 +308,111 @@ async def get_anomalies(
     )
 
 
-# ─── 6. Unified Dashboard Aggregation ────────────────────────────────────────
+# ─── 6. Threat Score Engine ───────────────────────────────────────────────────
+
+async def get_threat_scores(session: AsyncSession) -> ThreatScoreResponse:
+    """
+    Calculates operational threat scores [0.0 - 1.0] per node.
+    - Jitter Analysis: Variance in response time over the last 10 logs.
+    - Frequency Fingerprinting: Logs per second over the last 10 logs.
+    - Status Weighting: 429 and 206 status codes act as massive multipliers.
+    """
+    cached = await cache_get(CACHE_THREAT_SCORE)
+    if cached:
+        return ThreatScoreResponse(**cached)
+
+    subq = (
+        select(
+            SystemLog.node_id,
+            SystemLog.response_time_ms,
+            SystemLog.http_response_code,
+            SystemLog.ingested_at,
+            func.row_number().over(
+                partition_by=SystemLog.node_id,
+                order_by=SystemLog.log_id.desc()
+            ).label('rn')
+        )
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            Node.node_uuid,
+            Node.serial_number,
+            subq.c.response_time_ms,
+            subq.c.http_response_code,
+            subq.c.ingested_at
+        )
+        .join(Node, Node.node_uuid == subq.c.node_id)
+        .where(subq.c.rn <= 10)
+        .order_by(Node.node_uuid, subq.c.rn)
+    )
+
+    rows = (await session.execute(stmt)).all()
+
+    node_data = defaultdict(list)
+    sn_map = {}
+    for row in rows:
+        node_id = row.node_uuid
+        node_data[node_id].append(row)
+        sn_map[node_id] = row.serial_number
+
+    entries = []
+    
+    for node_id, logs in node_data.items():
+        rt_list = [log.response_time_ms for log in logs]
+        if len(rt_list) > 1:
+            variance = statistics.variance(rt_list)
+        else:
+            variance = 0.0
+
+        logs_sorted = sorted(logs, key=lambda x: x.ingested_at)
+        time_diff = (logs_sorted[-1].ingested_at - logs_sorted[0].ingested_at).total_seconds()
+        
+        if time_diff > 0:
+            lps = len(logs) / time_diff
+        else:
+            lps = float(len(logs))
+
+        codes = [log.http_response_code for log in logs]
+        has_ddos = 429 in codes
+        has_partial = 206 in codes
+        
+        status_multiplier = 1.0
+        if has_ddos:
+            status_multiplier = 2.5
+        elif has_partial:
+            status_multiplier = 1.5
+
+        jitter_score = min(variance / 5000.0, 0.4)
+        freq_score = min(lps / 10.0, 0.4)
+        
+        base_score = jitter_score + freq_score
+        
+        final_score = base_score * status_multiplier
+        final_score = min(max(final_score, 0.0), 1.0)
+        
+        entries.append(ThreatScoreEntry(
+            node_uuid=node_id,
+            serial_number=sn_map[node_id],
+            threat_score=round(final_score, 4),
+            jitter_variance=round(variance, 2),
+            logs_per_second=round(lps, 2),
+            status_multiplier=status_multiplier
+        ))
+
+    entries.sort(key=lambda x: x.threat_score, reverse=True)
+    
+    response = ThreatScoreResponse(
+        active_nodes=len(entries),
+        scores=entries,
+        generated_at=_now()
+    )
+    await cache_set(CACHE_THREAT_SCORE, response.model_dump(mode="json"))
+    return response
+
+
+# ─── 7. Unified Dashboard Aggregation ────────────────────────────────────────
 
 async def get_dashboard_state(session: AsyncSession, full: bool = False) -> DashboardAggregationResponse:
     """
@@ -317,7 +428,7 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
     # 2. Schema State
     schema_info = await get_schema_console(session)
 
-    # 3. Active Threats (Filtered by synced Master Window)
+    # 3. Active Threats (Filtered by synced Master Window: last 5000 pkts)
     window_start_id = (current_max_id // 5000) * 5000
     
     active_threats_stmt = (
@@ -360,6 +471,7 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
         node_data = {
             "id": n.node_uuid,
             "is_infected": (n.node_uuid in inf_nodes),
+            "is_quarantined": n.is_quarantined,
             "conflict_detected": False,
             "last_http_code": s.http_response_code if s else 200,
             "reported_json": s.json_status if s else "OPERATIONAL",

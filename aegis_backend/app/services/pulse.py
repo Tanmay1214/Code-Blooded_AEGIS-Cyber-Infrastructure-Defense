@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import AsyncSessionLocal
-from app.models.orm import SystemLog, AnomalyRecord
+from app.models.orm import SystemLog, AnomalyRecord, Node, QuarantineLog
 from app.core.config import get_settings
 
 logger = logging.getLogger("aegis.pulse")
@@ -116,6 +116,23 @@ async def forensic_autonomous_pulse(app):
                                 "anomaly_score": round(float(score), 6),
                                 "detector": "IsolationForest"
                             })
+                            
+                            # AEGIS PHASE 3: THE SWORD (Automated Quarantine)
+                            if score > 0.8:
+                                node_id = batch_data[k]["node_id"]
+                                # We need to update Node state — using a separate execute to be safe
+                                # or just session.add(node_obj) if we fetch it.
+                                # Let's fetch it for simplicity in this hackathon context.
+                                node = await session.get(Node, node_id)
+                                if node and not node.is_quarantined:
+                                    node.is_quarantined = True
+                                    node.quarantine_reason = f"THE SWORD: Isolation triggered by score {score:.4f}"
+                                    q_log = QuarantineLog(
+                                        node_id=node_id,
+                                        reason=node.quarantine_reason
+                                    )
+                                    session.add(q_log)
+                                    logger.critical("[SHIELD_ENGAGED] THE SWORD isolated node %d", node_id)
                     
                     if anomaly_records:
                         stmt_anom = pg_insert(AnomalyRecord).values(anomaly_records)
@@ -139,4 +156,43 @@ async def forensic_autonomous_pulse(app):
             logger.error("AUTONOMOUS_PULSE_GLITCH [%d]: Connection refused. Retrying in %ds. Error: %s", 
                          consecutive_failures, backoff, e)
             await asyncio.sleep(backoff)
+
+
+async def forensic_quarantine_watchdog():
+    """
+    AEGIS Quarantine Watchdog.
+    Periodically checks the AnomalyRecord table for high-risk threats
+    that may have been ingested via API (Simulator) or other vectors.
+    """
+    logger.info("THE_SWORD_WATCHDOG_ACTIVATED [SCAN_MODE: ACTIVE]")
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                # Find high-risk anomalies
+                # Query nodes that need isolation based on recent high-score anomalies
+                stmt = select(AnomalyRecord).where(
+                    AnomalyRecord.anomaly_score > 0.8
+                ).order_by(AnomalyRecord.detected_at.desc()).limit(20)
+                
+                res = await session.execute(stmt)
+                anomalies = res.scalars().all()
+                
+                for anom in anomalies:
+                    node = await session.get(Node, anom.node_id)
+                    if node and not node.is_quarantined:
+                        node.is_quarantined = True
+                        node.quarantine_reason = f"WATCHDOG: Isolated via High-Risk Anomaly (score={anom.anomaly_score:.4f})"
+                        q_log = QuarantineLog(
+                            node_id=node.node_uuid,
+                            reason=node.quarantine_reason
+                        )
+                        session.add(q_log)
+                        logger.critical("[WATCHDOG_STRIKE] THE SWORD isolated node %d", node.node_uuid)
+                
+                await session.commit()
+            
+            await asyncio.sleep(1) # Scan every second for production responsiveness
+        except Exception as e:
+            logger.error("WATCHDOG_GLITCH [RECOVERING]: %s", e)
+            await asyncio.sleep(5)
 
