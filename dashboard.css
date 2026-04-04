@@ -130,6 +130,28 @@ body {
     box-shadow: 0 0 8px #FF0000;
 }
 .node-pulsar.infected::after { border-color: #FF0000; }
+
+/* Autonomous Red Theme */
+.node-pulsar.operational-red {
+    background: rgba(255, 49, 49, 0.4);
+    box-shadow: 0 0 5px #ff3131;
+}
+.node-pulsar.operational-red::after { border-color: #ff3131; }
+
+.node-pulsar.infected-red {
+    background: rgba(255, 0, 0, 1);
+    box-shadow: 0 0 15px #ff0000;
+    animation: critical-pulse 1s infinite alternate;
+}
+.node-pulsar.infected-red::after { border-color: #ff0000; }
+
+@keyframes critical-pulse {
+    from { transform: scale(1); box-shadow: 0 0 10px #ff0000; }
+    to { transform: scale(1.5); box-shadow: 0 0 25px #ff0000; }
+}
+
+.leaflet-popup-content-wrapper.red-popup { border: 1px solid #ff3131; color: #ff3131; }
+
 @keyframes map-pulsar {
     0% { transform: scale(1); opacity: 0.8; }
     100% { transform: scale(3); opacity: 0; }

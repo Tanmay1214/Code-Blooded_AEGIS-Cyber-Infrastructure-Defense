@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AEGIS_AUTONOMOUS_RESPONSE</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+    <!-- Geographic Ingestion System -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body class="text-on-background selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+    <div class="crt-overlay"></div>
+    
+    <header class="bg-[#050505] text-white font-mono uppercase tracking-tighter text-sm border-b-2 border-[#ff3131] shadow-[0_0_15px_rgba(255,49,49,0.3)] flex justify-between items-center w-full px-6 py-2 z-50 fixed top-0 left-0">
+        <div class="flex items-center gap-4">
+            <span class="material-symbols-outlined text-[#ff3131]" data-icon="security">security</span>
+            <div class="header-threat-container flex items-center gap-3 relative">
+                <h1 id="headerThreats" class="text-lg font-black text-white uppercase tracking-widest">
+                    &gt;AEGIS_AUTONOMOUS v1.0 [ MISSION: RESPOND ]</h1>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex gap-8 items-center h-full">
+            <a class="text-[#007070] hover:text-[#00fbfb] transition-colors" href="dashboard.html">FORENSICS</a>
+            <a class="text-[#007070] hover:text-[#00fbfb] transition-colors" href="#">SCHEMA</a>
+            <a class="text-[#007070] hover:text-[#00fbfb] transition-colors" href="#">ASSETS</a>
+        </nav>
+
+        <div class="hidden md:flex gap-8 items-center">
+            <div class="flex gap-2 items-center brightness-125 text-[#ff3131]">
+                <span class="w-2 h-2 bg-[#ff3131] block animate-pulse"></span>
+                <span class="text-[10px]">AUTO_DEFENSE: ACTIVE</span>
+            </div>
+            <div class="flex gap-2 items-center text-[#ff3131] opacity-80">
+                <span class="w-2 h-2 bg-[#ff3131] block animate-pulse"></span>
+                <span class="text-[10px]">STATUS: MONITORING</span>
+            </div>
+        </div>
+    </header>
+
+    <aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex flex-col justify-between py-4 z-40 bg-[#0E0E0E] border-r border-[#ff3131]/30 shadow-[10px_0_15px_-10px_rgba(255,49,49,0.2)] font-mono text-xs uppercase">
+        <div class="flex flex-col gap-2">
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-10 h-10 border border-[#ff3131] p-0.5 mb-1">
+                    <img class="w-full h-full object-cover grayscale brightness-150" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt7E37Fhv-tj7hTP_57X2kiE8jd4W9rLfILrfSINHOE4yvKh6oZg0XlGLIt7QBgW3Y4Sj9guGbUadVhh8DKBHFDqWlqD0HGUlofi-oknc6lgfKXYMdNq_D6P1VFsLFMBq5jwq69QwxRnEMQTcvRSK26obBsTuLBtdJ21GuSEwH-vUR5aM6jkV3nkySrehTwGUD0QBEorYthvXR8gyKHIEQCh5MLbvjMRwt3reRovDY80aB6vEJcXqIRA58quaFxFiZkGmcHjI6silQ" />
+                </div>
+                <span class="text-[10px] text-[#ff3131]">OP_01</span>
+            </div>
+            <button onclick="window.location.href='dashboard.html'" class="text-[#007070] hover:bg-[#1C1B1B] hover:text-[#FFFFFF] py-4 flex flex-col items-center gap-1 transition-transform">
+                <span class="material-symbols-outlined">terminal</span>
+                <span class="text-[9px]">TERM</span>
+            </button>
+            <button class="text-[#007070] hover:bg-[#1C1B1B] hover:text-[#FFFFFF] py-4 flex flex-col items-center gap-1 transition-transform">
+                <span class="material-symbols-outlined">lan</span>
+                <span class="text-[9px]">NET</span>
+            </button>
+            <button class="bg-[#ff3131] text-[#050505] shadow-[0_0_10px_#ff3131] py-4 flex flex-col items-center gap-1 transition-transform">
+                <span class="material-symbols-outlined">hub</span>
+                <span class="text-[9px]">NODES</span>
+            </button>
+            <button class="text-[#007070] hover:bg-[#1C1B1B] hover:text-[#FFFFFF] py-4 flex flex-col items-center gap-1 transition-transform">
+                <span class="material-symbols-outlined">satellite_alt</span>
+                <span class="text-[9px]">SAT</span>
+            </button>
+        </div>
+        <button onclick="logout()" class="text-[#007070] hover:bg-[#93000a]/20 hover:text-error py-4 flex flex-col items-center gap-1 transition-transform">
+            <span class="material-symbols-outlined">logout</span>
+            <span class="text-[9px]">EXIT</span>
+        </button>
+    </aside>
+
+    <main class="ml-20 mt-16 p-4 h-[calc(100vh-64px)] grid grid-cols-12 grid-rows-12 gap-4">
+        <!-- PANEL 1: NODE HEALTH MONITOR (ANVAY) -->
+        <section class="col-span-12 lg:col-span-7 row-span-7 relative cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+            <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-black text-sm">health_and_safety</span>
+                    <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;ACTIVE_NODE_HEALTH</h3>
+                </div>
+                <div class="flex items-center gap-4 text-black text-[10px] font-black">
+                    GRID_SENSITIVITY: <span class="bg-black text-[#ff3131] px-2">HIGH</span>
+                </div>
+            </div>
+            <div class="flex-grow relative bg-[#080808]" id="nodeMapContainer">
+                <div id="map" class="z-0 h-full w-full"></div>
+                <div class="absolute inset-0 pointer-events-none z-20 crt-overlay opacity-30"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 2: QUARANTINE PROTOCOL LOG (ANVAY) -->
+        <section class="col-span-12 lg:col-span-5 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+            <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-black text-sm">assignment_late</span>
+                    <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;QUARANTINE_PROTOCOL_LOG</h3>
+                </div>
+            </div>
+            <div class="flex-grow p-4 font-mono text-[11px] leading-tight cyber-scrollbar overflow-y-auto bg-black text-[#ff3131]" id="quarantineLog">
+                <div class="mb-1 animate-pulse">>> INITIALIZING_AUTONOMOUS_LOG...</div>
+            </div>
+        </section>
+
+        <!-- PANEL 3: INCIDENT ATTACK TIMELINE (TANMAY) -->
+        <section class="col-span-12 lg:col-span-7 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+            <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-black text-sm">timeline</span>
+                    <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;INCIDENT_ATTACK_TIMELINE</h3>
+                </div>
+            </div>
+            <div class="flex-grow p-4 bg-black relative" id="timelineContainer">
+                <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: linear-gradient(90deg, #ff3131 1px, transparent 1px); background-size: 50px 100%;"></div>
+                <div class="h-full w-full flex items-center justify-center text-[#ff3131]/30 font-mono text-[10px]">WAITING_FOR_INCIDENT_DATA...</div>
+            </div>
+        </section>
+
+        <!-- PANEL 4: RESPONSE SIMULATOR HUB (TANMAY) -->
+        <section class="col-span-12 lg:col-span-5 row-span-7 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+            <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-black text-sm">tune</span>
+                    <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;RESPONSE_SIMULATOR_HUB</h3>
+                </div>
+            </div>
+            <div class="flex-grow p-6 bg-[#0E0E0E] flex flex-col gap-6 font-mono">
+                <div class="space-y-4">
+                    <div class="flex justify-between text-[11px] text-[#ff3131]">
+                        <span>ISOLATION_THRESHOLD</span>
+                        <span id="thresholdVal">85%</span>
+                    </div>
+                    <input type="range" class="w-full accent-[#ff3131] bg-[#1C1B1B]" min="0" max="100" value="85" id="thresholdSlider">
+                </div>
+                
+                <div class="flex flex-col gap-3">
+                    <button class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all">INJECT_LATENCY_JITTER</button>
+                    <button class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all">SIMULATE_DECEPTIVE_TRAFFIC</button>
+                    <button class="w-full bg-[#ff3131] text-black py-4 text-sm font-black hover:brightness-125 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,49,49,0.4)]">ENGAGE_FULL_GRID_QUARANTINE</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="fixed bottom-0 left-0 w-full h-6 bg-black z-50 flex items-center px-6 justify-between border-t border-[#ff3131]/10 pointer-events-none">
+        <div class="text-[9px] text-[#ff3131]/50 tracking-widest font-mono">
+            MISSION: ROUND_2 | <span class="text-[#ff3131]">AUTONOMOUS_MODE_ENGAGED</span>
+        </div>
+    </footer>
+
+    <script src="auth.js"></script>
+    <script src="autonomous.js"></script>
+</body>
+</html>
