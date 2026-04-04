@@ -14,38 +14,42 @@ _redis: aioredis.Redis | None = None
 def get_redis() -> aioredis.Redis:
     global _redis
     if _redis is None:
-        if settings.REDIS_URL:
-            _redis = aioredis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True,
-            )
-        else:
-            _redis = aioredis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                db=settings.REDIS_DB,
-                decode_responses=True,
-            )
+        _redis = aioredis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            decode_responses=True,
+        )
     return _redis
 
 
 async def cache_get(key: str) -> dict | list | None:
-    r = get_redis()
-    raw = await r.get(key)
-    if raw is None:
+    try:
+        r = get_redis()
+        raw = await r.get(key)
+        if raw is None:
+            return None
+        return json.loads(raw)
+    except Exception as e:
+        # Fallback cleanly if Redis is down
         return None
-    return json.loads(raw)
 
 
 async def cache_set(key: str, value: dict | list, ttl: int | None = None) -> None:
-    r = get_redis()
-    ttl = ttl or settings.CACHE_TTL_SECONDS
-    await r.setex(key, ttl, json.dumps(value))
+    try:
+        r = get_redis()
+        ttl = ttl or settings.CACHE_TTL_SECONDS
+        await r.setex(key, ttl, json.dumps(value))
+    except Exception:
+        pass
 
 
 async def cache_delete(key: str) -> None:
-    r = get_redis()
-    await r.delete(key)
+    try:
+        r = get_redis()
+        await r.delete(key)
+    except Exception:
+        pass
 
 
 # Cache key constants
@@ -53,3 +57,4 @@ CACHE_CITY_MAP = "aegis:city_map"
 CACHE_HEATMAP = "aegis:heatmap"
 CACHE_ANOMALIES = "aegis:anomalies"
 CACHE_SCHEMA_ACTIVE = "aegis:schema_active"
+CACHE_THREAT_SCORE = "aegis:threat_score"

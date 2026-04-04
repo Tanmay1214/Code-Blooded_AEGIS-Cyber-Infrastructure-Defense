@@ -3,7 +3,7 @@ import csv
 import os
 from sqlalchemy import insert
 from app.core.database import engine, Base
-from app.models.orm import Node, SystemLog, SchemaConfig, AnomalyRecord
+from app.models.orm import Node, SystemLog, SchemaConfig, AnomalyRecord, QuarantineLog
 
 async def reset_database():
     print(" [!] RESETTING AEGIS CORE DATABASE...")

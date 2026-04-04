@@ -22,14 +22,16 @@ from app.models.schemas import (
     LogIngestRequest, LogIngestResponse,
     BulkLogIngestRequest, BulkLogIngestResponse,
     HealthResponse, DashboardAggregationResponse,
+    ThreatInjectionRequest, ThreatScoreResponse,
 )
 from app.services.analytics import (
     get_city_map, get_heatmap, get_schema_console,
     get_asset_registry, get_node_status, get_anomalies,
-    get_dashboard_state,
+    get_dashboard_state, get_threat_scores,
 )
 from app.services.forensics import detect_cloned_identities, ClonedIdentityReport
 from app.services.auth import get_current_user, create_access_token, authenticate_user
+
 try:
     from app.ml.detector import score_log_entry, score_log_batch
 except ImportError:
@@ -187,6 +189,21 @@ async def list_anomalies(
     return await get_anomalies(session, skip=skip, limit=limit)
 
 
+# ─── Threat Scores ────────────────────────────────────────────────────────────
+
+@router.get("/analytics/threat-scores", response_model=ThreatScoreResponse, tags=["Analytics", "Threat Engine"])
+async def threat_scores(
+    session: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Returns real-time threat scoring data.
+    Evaluates Jitter Analysis, Frequency Fingerprinting, and Status Weighting
+    to compute a 0.0-1.0 threat probability for each node.
+    """
+    return await get_threat_scores(session)
+
+
 # ─── Ingestion Endpoint ───────────────────────────────────────────────────────
 
 @router.post("/ingest", response_model=LogIngestResponse, status_code=201, tags=["Ingestion"])
@@ -207,7 +224,7 @@ async def ingest_log(
 
     # Resolve effective load based on schema rotation
     # Note: We now estimate version based on previous max + 1, 
-    # but the DB will assign the true final ID.
+    # but the DB will assign the true final ID via autoincrement.
     max_log_result = await session.execute(select(func.max(SystemLog.log_id)))
     estimated_next_id = (max_log_result.scalar() or 0) + 1
 
@@ -300,10 +317,6 @@ async def ingest_logs_bulk(
     else:
         ml_results = [(False, 0.0)] * len(valid_logs)
 
-    # 3. Batch DB Prep
-    max_log_result = await session.execute(select(func.max(SystemLog.log_id)))
-    current_max_id = max_log_result.scalar() or 0
-
     # 3. Batch DB Prep: Use PostgreSQL-native bulk insert for speed
     logs_data = []
     for i, log in enumerate(valid_logs):
@@ -371,3 +384,62 @@ async def dashboard_aggregator(
     Set full=true to receive static node metadata (positions, serials).
     """
     return await get_dashboard_state(session, full=full)
+
+
+# ─── Simulation ───────────────────────────────────────────────────────────────
+
+@router.post("/simulator/inject-threat", status_code=201, tags=["Simulation"])
+async def inject_threat(
+    payload: ThreatInjectionRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Force a node into a state of critical distress.
+    This injects logs into the telemetry stream with high-risk parameters
+    to trigger the 'Sword' automated quarantine.
+    """
+    node = await session.get(Node, payload.node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail=f"Node {payload.node_id} not found")
+
+    # Generate threatening log parameters
+    rt = 1000  # High latency
+    code = 200 # Healthy-ish but high load and latency will trigger IsolationForest
+    load = 0.95 # High system load
+
+    if payload.threat_type == "DDOS":
+        code = 429
+        rt = 5
+        load = 0.5
+    elif payload.threat_type == "LATENCY":
+        rt = 2500
+        load = 0.8
+    elif payload.threat_type == "MALWARE":
+        rt = 150
+        load = 0.99 # Outlier load
+
+    # Ingest the malicious log
+    new_log = SystemLog(
+        node_id=payload.node_id,
+        json_status="OPERATIONAL",
+        http_response_code=code,
+        response_time_ms=rt,
+        load_val=load,
+        l_v1=load
+    )
+    session.add(new_log)
+    await session.flush() # Get log_id
+
+    # Simulation Force: Trigger the anomaly watchdog
+    anomaly_record = AnomalyRecord(
+        node_id=payload.node_id,
+        log_id=new_log.log_id,
+        anomaly_score=payload.intensity,
+        detector="ThreatSimulator"
+    )
+    session.add(anomaly_record)
+    await session.commit()
+    
+    logger.warning("[SIMULATOR] Threat '%s' injected into node %d. Monitoring for SWORD response...", payload.threat_type, payload.node_id)
+    
+    return {"message": f"Threat {payload.threat_type} injected into node {payload.node_id}. Automated quarantine should trigger if score > 0.8."}

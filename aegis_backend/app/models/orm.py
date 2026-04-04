@@ -22,6 +22,8 @@ class Node(Base):
     user_agent: Mapped[str] = mapped_column(String(512), nullable=False)
     serial_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     is_infected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_quarantined: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    quarantine_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )
@@ -83,6 +85,10 @@ class SystemLog(Base):
             return "CRITICAL"
         return "UNKNOWN"
 
+    __table_args__ = (
+        Index("ix_system_logs_node_log", "node_id", "log_id"),
+    )
+
     def __repr__(self) -> str:
         return f"<Log {self.log_id} node={self.node_id} http={self.http_response_code}>"
 
@@ -121,3 +127,24 @@ class AnomalyRecord(Base):
     __table_args__ = (
         Index("ix_anomaly_node_log", "node_id", "log_id"),
     )
+
+
+class QuarantineLog(Base):
+    """
+    quarantine_logs — forensic audit trail for node isolation events.
+    Created when the 'Sword' automated quarantine triggers.
+    """
+    __tablename__ = "quarantine_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("nodes.node_uuid", ondelete="CASCADE"), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    isolated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    restored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<QuarantineLog node={self.node_id} reason={self.reason}>"

@@ -45,10 +45,11 @@ async def lifespan(app: FastAPI):
         logger.warning("ML models not found — inference disabled. Run train_model.py. (%s)", e)
         app.state.models = None
 
-    # Launch autonomous forensic pulse (Zero-Cost Automation)
-    from app.services.pulse import forensic_autonomous_pulse
+    # Launch autonomous forensic services
+    from app.services.pulse import forensic_autonomous_pulse, forensic_quarantine_watchdog
     import asyncio
     asyncio.create_task(forensic_autonomous_pulse(app))
+    asyncio.create_task(forensic_quarantine_watchdog())
 
     yield  # ── Application is running ───────────────────────
 
