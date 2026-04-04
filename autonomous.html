@@ -138,9 +138,9 @@
                 </div>
                 
                 <div class="flex flex-col gap-3">
-                    <button class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all">INJECT_LATENCY_JITTER</button>
-                    <button class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all">SIMULATE_DECEPTIVE_TRAFFIC</button>
-                    <button class="w-full bg-[#ff3131] text-black py-4 text-sm font-black hover:brightness-125 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,49,49,0.4)]">ENGAGE_FULL_GRID_QUARANTINE</button>
+                    <button onclick="injectMockStress('LATENCY')" class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all uppercase tracking-widest">INJECT_LATENCY_JITTER</button>
+                    <button onclick="injectMockStress('DECEPTION')" class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-xs font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all uppercase tracking-widest">SIMULATE_DECEPTIVE_TRAFFIC</button>
+                    <button class="w-full bg-[#ff3131] text-black py-4 text-sm font-black hover:brightness-125 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,49,49,0.4)] uppercase tracking-tighter">ENGAGE_FULL_GRID_QUARANTINE</button>
                 </div>
             </div>
         </section>

@@ -7,7 +7,8 @@
 // ── API URL Detection ──────────────────────────────────────────
 const API_URL = (
   window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1'
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === ''
 )
   ? 'http://127.0.0.1:8000'
   : 'https://aegis-api-65i8.onrender.com';
@@ -19,10 +20,20 @@ function getToken() {
 }
 
 function checkAuth() {
-  // Allow access if on login page, otherwise redirect
-  const isLoginPage = window.location.pathname.endsWith('login.html') ||
-                      window.location.pathname === '/login';
-  if (!getToken() && !isLoginPage) {
+  const token = getToken();
+  const isLoginPage = window.location.pathname.endsWith('login.html') || 
+                      window.location.pathname === '/login' ||
+                      window.location.pathname === '/';
+  
+  console.log(`[AUTH_GUARD] Path: ${window.location.pathname} | Token: ${token ? 'PRESENT' : 'MISSING'}`);
+
+  if (!token && !isLoginPage) {
+    // If we're on a local file, give it a moment to stabilize before redirecting
+    if (window.location.protocol === 'file:') {
+      console.warn("[AUTH_GUARD] Local file detected. Ensuring persistence...");
+      // Optional: Relax guard for local development if needed
+      // return; 
+    }
     window.location.href = 'login.html';
   }
 }
@@ -74,7 +85,7 @@ async function initAuth() {
         // Brief success flash before redirect
         if (submitBtn) submitBtn.textContent = 'ACCESS GRANTED ✓';
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.href = 'dashboard.html';
         }, 400);
       } else {
         if (errorEl) {

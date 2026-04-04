@@ -2,7 +2,8 @@
 
 const API_BASE = (
     window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === ''
 )
     ? "http://127.0.0.1:8000/api" 
     : "https://aegis-api-65i8.onrender.com/api"; 
@@ -59,13 +60,123 @@ async function fetchAutonomousData() {
 function updateTacticalUI() {
     if (!dashboardData) return;
 
-    // Draw Red-Alert Nodes (Anvay)
+    // --- ANVAY'S REGISTRY (P3) ---
     drawTacticalNodes();
+    renderQuarantineLog();
     
-    // Update Quarantine Log (Anvay) - Placeholder
-    // Update Attack Timeline (Tanmay) - Placeholder
+    // --- TANMAY'S REGISTRY (P4) ---
+    renderAttackTimeline();
 }
 
+// [TANMAY] Incident Attack Timeline Logic
+function renderAttackTimeline() {
+    const container = document.getElementById('timelineContainer');
+    if (!container || !dashboardData.anomalies) return;
+
+    // Clear placeholder
+    if (container.innerHTML.includes('WAITING')) container.innerHTML = '';
+
+    const timelineData = dashboardData.anomalies.slice(0, 10); // Last 10 anomalies
+    
+    let timelineHTML = '<div class="flex flex-col gap-3 p-2">';
+    timelineData.forEach((event, index) => {
+        const time = new Date().toLocaleTimeString();
+        const severityColor = event.anomaly_score > 0.8 ? '#ff3131' : '#ff9d00';
+        
+        timelineHTML += `
+            <div class="border-l-2 border-[${severityColor}] pl-4 py-1 relative animate-slide-in">
+                <div class="absolute -left-[5px] top-2 w-[8px] h-[8px] rounded-full bg-[${severityColor}]"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] text-[${severityColor}] font-black">[${time}] BREACH_DETECTED</span>
+                    <span class="text-[9px] text-white/50">NODE_${event.node_id}</span>
+                </div>
+                <div class="text-[11px] text-white font-mono mt-1 uppercase">
+                    Anomaly_Score: <span class="bg-[${severityColor}]/20 px-1">${event.anomaly_score.toFixed(4)}</span> | 
+                    Vector: IsolationForest
+                </div>
+            </div>
+        `;
+    });
+    timelineHTML += '</div>';
+    container.innerHTML = timelineHTML;
+}
+
+// [TANMAY] Response Simulator Hub Logic
+const slider = document.getElementById('thresholdSlider');
+const display = document.getElementById('thresholdVal');
+
+if(slider && display) {
+    slider.oninput = function() {
+        display.innerText = this.value + "%";
+        // This value will eventually be sent to /api/simulator/threshold
+        console.log(`[TANMAY_MISSION] MISSION_THRESHOLD updated to: ${this.value}%`);
+    }
+}
+
+// Simulated Threat Injection (For Tanmay to test UI reactivity)
+window.injectMockStress = function(type) {
+    const timestamp = new Date().toLocaleTimeString();
+    
+    // 1. Ensure dashboardData is initialized (Crucial for fresh Docker start)
+    if (!dashboardData) {
+        dashboardData = { anomalies: [], nodes: [], metadata: {}, schema_engine: {} };
+        console.warn("[TANMAY_MISSION] Initializing local dashboardData for Mock Ingestion...");
+    }
+    if (!dashboardData.anomalies) dashboardData.anomalies = [];
+
+    // 2. Log to Quarantine Feed
+    const log = document.getElementById('quarantineLog');
+    if(log) {
+        const entry = document.createElement('div');
+        entry.className = 'mb-1 text-[#ff3131] border-b border-[#ff3131]/10 pb-1 animate-pulse';
+        entry.innerHTML = `[${timestamp}] ! STRESS_INJECTION: ${type} signature detected. Sector_Alpha_02 isolated.`;
+        log.prepend(entry);
+    }
+
+    // 3. Inject into Timeline Data Array (P4 Support)
+    const mockAnomaly = {
+        node_id: Math.floor(Math.random() * 500) + 1,
+        anomaly_score: 0.95 + (Math.random() * 0.05), // High severity
+        log_id: Date.now()
+    };
+    dashboardData.anomalies.unshift(mockAnomaly);
+    
+    // 4. Force immediate UI updates
+    renderAttackTimeline(); 
+    renderQuarantineLog();
+    
+    console.log(`[TANMAY_MISSION] Mock ${type} pulse successfully injected into Attack Timeline.`);
+}
+
+// [ANVAY] Quarantine Log Logic (P3)
+function renderQuarantineLog() {
+    const log = document.getElementById('quarantineLog');
+    if (!log || !dashboardData.anomalies) return;
+
+    // Filter high-severity as "Quarantined"
+    const quarantined = dashboardData.anomalies.filter(a => a.anomaly_score > 0.9);
+    
+    if (quarantined.length > 0 && log.innerHTML.includes('INITIALIZING')) {
+        log.innerHTML = '';
+    }
+
+    quarantined.slice(0, 15).forEach(q => {
+        const id = `q-log-${q.log_id}`;
+        if (document.getElementById(id)) return;
+
+        const entry = document.createElement('div');
+        entry.id = id;
+        entry.className = 'mb-2 border-l-2 border-[#ff3131] pl-3 py-1 bg-[#ff3131]/5';
+        entry.innerHTML = `
+            <div class="text-[9px] text-[#ff3131] uppercase opacity-70">${new Date().toISOString()}</div>
+            <div class="font-black text-white">NODE_${q.node_id}: QUARANTINE_ENGAGED</div>
+            <div class="text-[10px] text-[#ff3131]">CRITICAL_THRESHOLD: ${q.anomaly_score.toFixed(4)} BREACHED</div>
+        `;
+        log.prepend(entry);
+    });
+}
+
+// --- ANVAY'S REGISTRY (P3) ---
 function drawTacticalNodes() {
     if (!dashboardData || !dashboardData.nodes || !map) return;
 
@@ -78,9 +189,8 @@ function drawTacticalNodes() {
             marker.setLatLng([lat, lng]);
             const el = marker.getElement()?.querySelector('.node-pulsar');
             if (el) {
-                // In Autonomous mode, all infected nodes pulse RED
-                if (node.is_infected) el.classList.add('infected-red');
-                else el.classList.remove('infected-red');
+                if (node.is_infected) el.className = 'node-pulsar infected-red';
+                else el.className = 'node-pulsar operational-red';
             }
         } else {
             const redIcon = L.divIcon({
@@ -103,19 +213,6 @@ function drawTacticalNodes() {
         }
     });
 }
-
-// 4. Simulator Interaction (Tanmay)
-const slider = document.getElementById('thresholdSlider');
-const display = document.getElementById('thresholdVal');
-
-if(slider && display) {
-    slider.oninput = function() {
-        display.innerText = this.value + "%";
-        console.log(`[SIMULATOR] Updating Isolation Threshold: ${this.value}%`);
-    }
-}
-
-// Initialization
 window.addEventListener('DOMContentLoaded', () => {
     initTacticalMap();
     fetchAutonomousData();
