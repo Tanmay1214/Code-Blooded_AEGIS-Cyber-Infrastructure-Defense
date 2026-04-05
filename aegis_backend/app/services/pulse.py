@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import AsyncSessionLocal
-from app.models.orm import SystemLog, AnomalyRecord, Node, QuarantineLog
+from app.models.orm import SystemLog, AnomalyRecord, Node, QuarantineLog, SystemSetting
 from app.core.config import get_settings
 
 logger = logging.getLogger("aegis.pulse")
@@ -59,11 +59,21 @@ async def forensic_autonomous_pulse(app):
     while True:
         try:
             # Slower ingestion for realistic simulation and to prevent 2000 logs/request bursts
-            batch_size = 5
+            batch_size = 50
             batch_data = []
             
-            # Determine current log_id offset 
+            # Determine current log_id offset and Dynamic Threshold
             async with AsyncSessionLocal() as session:
+                # ── SYNC TACTICAL THRESHOLD ──
+                import math
+                setting_res = await session.execute(select(SystemSetting).where(SystemSetting.key == "quarantine_threshold"))
+                setting = setting_res.scalar_one_or_none()
+                threshold_pct = float(setting.value) if setting else 0.5
+                # Reverse Sigmoid: score = ln(1/threat - 1) / 12
+                # We cap threat to [0.01, 0.99] to avoid log(0) or div by zero
+                safe_threat = max(0.01, min(0.99, threshold_pct))
+                dynamic_score_limit = math.log((1.0 / safe_threat) - 1.0) / 12.0
+
                 max_id_res = await session.execute(select(func.max(SystemLog.log_id)))
                 current_max_id = (max_id_res.scalar() or 0)
             
@@ -90,9 +100,6 @@ async def forensic_autonomous_pulse(app):
                     })
                 
                 # ── AEGIS ATOMIC REGISTRY ──
-                # node_uuid is the PK on the Node table; SystemLog.node_id is FK → nodes.node_uuid
-                # Nodes are pre-seeded; this insert is a safety net for any unseen node_ids.
-                # user_agent and serial_number are NOT NULL — provide placeholders.
                 unique_node_ids = list(set(d["node_id"] for d in batch_data))
                 node_sync_stmt = pg_insert(Node.__table__).values(
                     [{"node_uuid": nid, "user_agent": f"AEGIS-Node/2.0", "serial_number": f"SN-{nid}", "is_infected": False, "is_quarantined": False} for nid in unique_node_ids]
@@ -138,12 +145,13 @@ async def forensic_autonomous_pulse(app):
                             if node:
                                 node.is_infected = True
                                 
-                                # QUARANTINE_SWORD
-                                if score > 0.8 and not node.is_quarantined:
+                                # QUARANTINE_SWORD: Threshold dynamically linked to SystemSettings (Slider)
+                                # Activation happens if score is lower than the dynamic limit.
+                                if score <= dynamic_score_limit and not node.is_quarantined:
                                     node.is_quarantined = True
-                                    node.quarantine_reason = f"SWORD: score {score:.4f}"
+                                    node.quarantine_reason = f"SWORD: dynamic threshold {threshold_pct*100:.0f}% broken"
                                     session.add(QuarantineLog(node_id=node.node_uuid, reason=node.quarantine_reason))
-                                    logger.critical("[SHIELD_ENGAGED] THE SWORD isolated node %d", node_id)
+                                    logger.critical("[SHIELD_ENGAGED] THE SWORD isolated node %d (Limit: %d%%)", node_id, int(threshold_pct*100))
                     
                     if anomaly_records:
                         await session.execute(pg_insert(AnomalyRecord).values(anomaly_records))
@@ -154,7 +162,7 @@ async def forensic_autonomous_pulse(app):
             if iteration % 10 == 0:
                 logger.info("PULSE_HEARTBEAT | iteration=%d | total_logs=%d", iteration, current_max_id + batch_size)
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(5.0)
 
         except Exception as e:
             import traceback

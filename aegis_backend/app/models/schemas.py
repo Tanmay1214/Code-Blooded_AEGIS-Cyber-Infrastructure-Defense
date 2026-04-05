@@ -180,6 +180,8 @@ class LogEntry(BaseModel):
     message: str
     status: str
     http_code: int
+    threat_score: float = 0.0
+    detector: str | None = None
 
 
 class DashboardAggregationResponse(BaseModel):
@@ -194,7 +196,7 @@ class DashboardAggregationResponse(BaseModel):
 
 class ThreatInjectionRequest(BaseModel):
     node_id: int
-    threat_type: Literal["DDOS", "LATENCY", "MALWARE"]
+    threat_type: Literal["DDOS", "LATENCY", "MALWARE", "DECEPTION"]
     intensity: float = Field(0.9, ge=0.0, le=1.0)
 
 
@@ -213,3 +215,14 @@ class ThreatScoreResponse(BaseModel):
     active_nodes: int
     scores: list[ThreatScoreEntry]
     generated_at: datetime
+
+
+class SystemSettingSchema(BaseModel):
+    key: str
+    value: str
+    description: str | None = None
+    updated_at: datetime
+
+
+class SystemSettingUpdate(BaseModel):
+    value: str

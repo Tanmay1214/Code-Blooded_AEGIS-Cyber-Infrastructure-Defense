@@ -148,3 +148,20 @@ class QuarantineLog(Base):
 
     def __repr__(self) -> str:
         return f"<QuarantineLog node={self.node_id} reason={self.reason}>"
+
+
+class SystemSetting(Base):
+    """
+    system_settings — Dynamic configuration keys (e.g. thresholds, timeouts).
+    """
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), onupdate=text("now()")
+    )
+
+    def __repr__(self) -> str:
+        return f"<Setting {self.key}={self.value}>"

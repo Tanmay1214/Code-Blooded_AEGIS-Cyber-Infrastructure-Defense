@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.config import get_settings
-from app.models.orm import Node, SystemLog, AnomalyRecord
+from app.models.orm import Node, SystemLog, AnomalyRecord, SystemSetting, QuarantineLog
 from app.models.schemas import (
     NodeOut, NodeStatusOut,
     CityMapResponse, HeatmapResponse,
@@ -22,12 +22,13 @@ from app.models.schemas import (
     LogIngestRequest, LogIngestResponse,
     BulkLogIngestRequest, BulkLogIngestResponse,
     HealthResponse, DashboardAggregationResponse,
-    ThreatInjectionRequest, ThreatScoreResponse,
+    ThreatInjectionRequest, ThreatScoreResponse, LogEntry,
+    SystemSettingSchema, SystemSettingUpdate,
 )
 from app.services.analytics import (
     get_city_map, get_heatmap, get_schema_console,
     get_asset_registry, get_node_status, get_anomalies,
-    get_dashboard_state, get_threat_scores,
+    get_dashboard_state, get_threat_scores, get_system_logs,
 )
 from app.services.forensics import detect_cloned_identities, ClonedIdentityReport
 from app.services.auth import get_current_user, create_access_token, authenticate_user
@@ -202,6 +203,22 @@ async def threat_scores(
     to compute a 0.0-1.0 threat probability for each node.
     """
     return await get_threat_scores(session)
+
+
+# ─── System Logs Stream ───────────────────────────────────────────────────────
+
+@router.get("/system-logs", response_model=list[LogEntry], tags=["Telemetry"])
+async def stream_system_logs(
+    limit: int = Query(50, ge=1, le=500),
+    after_id: int | None = Query(None, description="Fetch records sequentially after this Log ID."),
+    session: AsyncSession = Depends(get_db),
+    # NOTE: Leaving unauthenticated for simulation dashboard fetching. Can be restricted if needed.
+):
+    """
+    Returns the real-time telemetry stream of incoming node logs.
+    Use `after_id` to poll for new records since the last check.
+    """
+    return await get_system_logs(session, limit=limit, after_id=after_id)
 
 
 # ─── Ingestion Endpoint ───────────────────────────────────────────────────────
@@ -386,7 +403,7 @@ async def dashboard_aggregator(
         from fastapi.responses import JSONResponse
         data = await get_dashboard_state(session, full=full)
         # Manually validate to see Pydantic error
-        return JSONResponse(content=data.model_dump(mode="json"))
+        return JSONResponse(content=data.model_dump(mode="json", exclude_none=True))
     except Exception as e:
         import traceback
         error_msg = f"AGGREGATOR SECTOR-FAIL: {str(e)}\n{traceback.format_exc()}"
@@ -426,6 +443,10 @@ async def inject_threat(
     elif payload.threat_type == "MALWARE":
         rt = 150
         load = 0.99 # Outlier load
+    elif payload.threat_type == "DECEPTION":
+        rt = 200
+        code = 403
+        load = 0.75
 
     # Ingest the malicious log
     new_log = SystemLog(
@@ -439,16 +460,85 @@ async def inject_threat(
     session.add(new_log)
     await session.flush() # Get log_id
 
+    import math
+    # Map the UI percentage (intensity 0.0 - 1.0) back into the neural IsolationForest scale (-0.5 to +0.5)
+    # Target Threat = 1 / (1 + exp(12 * score))  =>  score = -ln(1/Threat - 1) / 12
+    safe_intensity = max(0.01, min(0.99, payload.intensity))
+    raw_score = -math.log((1.0 / safe_intensity) - 1.0) / 12.0
+
     # Simulation Force: Trigger the anomaly watchdog
     anomaly_record = AnomalyRecord(
         node_id=payload.node_id,
         log_id=new_log.log_id,
-        anomaly_score=payload.intensity,
+        anomaly_score=raw_score,
         detector="ThreatSimulator"
     )
     session.add(anomaly_record)
+    
+    # Retrieve Dynamic Threshold from system
+    from app.models.orm import SystemSetting
+    thresh_stmt = select(SystemSetting).where(SystemSetting.key == "quarantine_threshold")
+    thresh_row = (await session.execute(thresh_stmt)).scalar()
+    system_threshold = float(thresh_row.value) if thresh_row else 0.50
+    
+    # TRIGGER THE SWORD: Simulate the automated defense mechanism if intensity is critical
+    if safe_intensity >= system_threshold:
+        if not node.is_quarantined:
+            node.is_infected = True
+            node.is_quarantined = True
+            node.quarantine_reason = f"SWORD SIMULATOR: intensity {safe_intensity*100:.1f}% >= threshold {system_threshold*100:.1f}%"
+            session.add(QuarantineLog(node_id=node.node_uuid, reason=node.quarantine_reason))
+            logger.critical("[SHIELD_ENGAGED] THE SWORD (Simulated) isolated node %d", payload.node_id)
+            
     await session.commit()
     
     logger.warning("[SIMULATOR] Threat '%s' injected into node %d. Monitoring for SWORD response...", payload.threat_type, payload.node_id)
     
     return {"message": f"Threat {payload.threat_type} injected into node {payload.node_id}. Automated quarantine should trigger if score > 0.8."}
+
+
+# ─── Settings ─────────────────────────────────────────────────────────────────
+
+@router.get("/settings/{key}", response_model=SystemSettingSchema, tags=["Settings"])
+async def get_system_setting(
+    key: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """Fetch a tactical system setting."""
+    res = await session.execute(select(SystemSetting).where(SystemSetting.key == key))
+    setting = res.scalar_one_or_none()
+    
+    if not setting:
+        # Auto-seed default quarantine threshold if missing
+        if key == "quarantine_threshold":
+            new_setting = SystemSetting(key=key, value="0.5", description="Global SWORD Quarantine Threshold (0.0-1.0)")
+            session.add(new_setting)
+            await session.commit()
+            return new_setting
+        raise HTTPException(status_code=404, detail=f"Setting {key} not found")
+    
+    return setting
+
+
+@router.patch("/settings/{key}", response_model=SystemSettingSchema, tags=["Settings"])
+async def update_system_setting(
+    key: str,
+    payload: SystemSettingUpdate,
+    session: AsyncSession = Depends(get_db),
+):
+    """Update a tactical system setting in real-time."""
+    res = await session.execute(select(SystemSetting).where(SystemSetting.key == key))
+    setting = res.scalar_one_or_none()
+    
+    if not setting:
+        # Create it if it doesn't exist
+        setting = SystemSetting(key=key, value=payload.value)
+        session.add(setting)
+    else:
+        setting.value = payload.value
+        
+    await session.commit()
+    await session.refresh(setting)
+    
+    logger.info("[MISSION_CONTROL] System setting '%s' updated to: %s", key, payload.value)
+    return setting
