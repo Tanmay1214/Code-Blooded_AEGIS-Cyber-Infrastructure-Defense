@@ -458,8 +458,10 @@ async def get_dashboard_state(session: AsyncSession, full: bool = False) -> Dash
         
         # Optimized: Get the latest log for each node using DISTINCT ON (Postgres-specific power)
         # This leverages the ix_system_logs_node_log index (node_id, log_id)
+        lookback_id = max(0, current_max_id - 5000)
         status_stmt = (
             select(SystemLog)
+            .where(SystemLog.log_id >= lookback_id)
             .distinct(SystemLog.node_id)
             .order_by(SystemLog.node_id, SystemLog.log_id.desc())
         )
