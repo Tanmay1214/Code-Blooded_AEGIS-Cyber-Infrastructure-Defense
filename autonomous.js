@@ -214,6 +214,18 @@ if(slider && display) {
         display.innerText = this.value + "%";
         // Update local state instantly for UI highlights
         window.globalThreshold = this.value / 100;
+        
+        // Wipe local telemetry radar cache immediately
+        window.liveNodeScores = {};
+        
+        // Force-clear the node health monitor cache to 'OPERATIONAL' baseline
+        if (dashboardData && dashboardData.nodes) {
+            dashboardData.nodes.forEach(n => {
+                n.is_infected = false;
+                n.is_quarantined = false;
+            });
+            updateHealthGrid();
+        }
     };
     slider.onchange = function() {
         updateBackendThreshold(this.value);

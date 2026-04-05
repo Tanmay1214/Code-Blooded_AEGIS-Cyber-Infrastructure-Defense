@@ -537,6 +537,12 @@ async def update_system_setting(
     else:
         setting.value = payload.value
         
+    if key == "quarantine_threshold":
+        from sqlalchemy import update
+        from app.models.orm import Node
+        # Reset entire Node Health Monitor back to OPERATIONAL Initial state
+        await session.execute(update(Node).values(is_infected=False, is_quarantined=False))
+        
     await session.commit()
     await session.refresh(setting)
     
