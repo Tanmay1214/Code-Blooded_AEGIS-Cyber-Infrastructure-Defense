@@ -4,14 +4,18 @@ Async SQLAlchemy engine + session factory.
 """
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from urllib.parse import urlparse
 from app.core.config import get_settings
 
 settings = get_settings()
 
 # Standard asyncpg SSL logic for production (Render/Managed DB)
 connect_args = {}
-# Only force SSL if NOT running on localhost or inside the standard Docker 'postgres' network
-if all(h not in settings.DATABASE_URL_STR for h in ["localhost", "127.0.0.1", "postgres"]):
+# Accurate hostname-based detection instead of global string matching
+parsed_url = urlparse(settings.DATABASE_URL_STR)
+hostname = parsed_url.hostname or ""
+
+if not any(h in hostname for h in ["localhost", "127.0.0.1", "postgres"]):
     connect_args["ssl"] = True
 
 engine = create_async_engine(
