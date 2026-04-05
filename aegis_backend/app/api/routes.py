@@ -538,10 +538,12 @@ async def update_system_setting(
         setting.value = payload.value
         
     if key == "quarantine_threshold":
-        from sqlalchemy import update
-        from app.models.orm import Node
+        from sqlalchemy import update, delete
+        from app.models.orm import Node, AnomalyRecord
         # Reset entire Node Health Monitor back to OPERATIONAL Initial state
-        await session.execute(update(Node).values(is_infected=False, is_quarantined=False))
+        await session.execute(update(Node).values(is_infected=False, is_quarantined=False, quarantine_reason=None))
+        # Purge ML network memory to allow a fresh simulation at the new threshold
+        await session.execute(delete(AnomalyRecord))
         
     await session.commit()
     await session.refresh(setting)
