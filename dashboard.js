@@ -283,7 +283,7 @@ function updateUI() {
             setTimeout(() => headerThreats.classList.remove('anomaly-scan'), 600);
         }
         headerThreats.setAttribute('data-val', totalAnomalies);
-        headerThreats.innerHTML = `AEGIS_CORE v4.2 [ <span class="${threatCount > 0 ? 'text-error' : 'text-primary-container'} font-black">THREATS: ${threatCount} | HITS: ${totalAnomalies}</span> ]`;
+        headerThreats.innerHTML = `&gt;AEGIS_CORE v4.2`;
     }
 
     const tooltip = document.querySelector('.threat-tooltip');

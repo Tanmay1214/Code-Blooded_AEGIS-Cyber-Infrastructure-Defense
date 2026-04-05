@@ -6,25 +6,29 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>AEGIS_AUTONOMOUS_RESPONSE</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
     <!-- Extraneous Map Imports Removed for Raw High-Density Grid Structure -->
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
 <body class="text-on-background selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
     <div class="crt-overlay"></div>
-    
+
     <header
         class="bg-[#050505] text-white font-mono uppercase tracking-tighter text-sm border-b-2 border-[#ff3131] shadow-[0_0_15px_rgba(255,49,49,0.3)] flex justify-between items-center w-full px-6 py-2 z-50 fixed top-0 left-0">
         <div class="flex items-center gap-4">
             <span class="material-symbols-outlined text-[#ff3131]" data-icon="terminal">terminal</span>
             <div class="header-threat-container flex items-center gap-3 relative">
                 <h1 id="headerThreats" class="text-lg font-black text-white uppercase tracking-widest" data-val="0">
-                    &gt;AEGIS_CORE v4.2 [THREATS: 0]</h1>
+                    &gt;AEGIS_CORE v4.2</h1>
                 <span class="material-symbols-outlined text-[#ff3131] text-base animate-pulse"
                     data-icon="fingerprint">fingerprint</span>
-                <div class="threat-tooltip" style="border-color: #ff3131; box-shadow: 0 0 15px rgba(255,49,49,0.3);">0 Active Breaches | 0 Latency Spikes</div>
+                <div class="threat-tooltip" style="border-color: #ff3131; box-shadow: 0 0 15px rgba(255,49,49,0.3);">0
+                    Active Breaches | 0 Latency Spikes</div>
             </div>
         </div>
 
@@ -48,33 +52,39 @@
         </div>
     </header>
 
-    <aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex flex-col justify-between py-4 z-40 bg-[#0E0E0E] border-r border-[#ff3131]/30 shadow-[10px_0_15px_-10px_rgba(255,49,49,0.2)] font-mono text-xs uppercase">
+    <aside
+        class="fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex flex-col justify-between py-4 z-40 bg-[#0E0E0E] border-r border-[#ff3131]/30 shadow-[10px_0_15px_-10px_rgba(255,49,49,0.2)] font-mono text-xs uppercase">
         <div class="flex flex-col gap-2">
             <div class="flex flex-col items-center mb-6">
                 <div class="w-10 h-10 border border-[#ff3131] p-0.5 mb-1">
-                    <img class="w-full h-full object-cover grayscale brightness-150" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt7E37Fhv-tj7hTP_57X2kiE8jd4W9rLfILrfSINHOE4yvKh6oZg0XlGLIt7QBgW3Y4Sj9guGbUadVhh8DKBHFDqWlqD0HGUlofi-oknc6lgfKXYMdNq_D6P1VFsLFMBq5jwq69QwxRnEMQTcvRSK26obBsTuLBtdJ21GuSEwH-vUR5aM6jkV3nkySrehTwGUD0QBEorYthvXR8gyKHIEQCh5MLbvjMRwt3reRovDY80aB6vEJcXqIRA58quaFxFiZkGmcHjI6silQ" />
+                    <img class="w-full h-full object-cover grayscale brightness-150"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt7E37Fhv-tj7hTP_57X2kiE8jd4W9rLfILrfSINHOE4yvKh6oZg0XlGLIt7QBgW3Y4Sj9guGbUadVhh8DKBHFDqWlqD0HGUlofi-oknc6lgfKXYMdNq_D6P1VFsLFMBq5jwq69QwxRnEMQTcvRSK26obBsTuLBtdJ21GuSEwH-vUR5aM6jkV3nkySrehTwGUD0QBEorYthvXR8gyKHIEQCh5MLbvjMRwt3reRovDY80aB6vEJcXqIRA58quaFxFiZkGmcHjI6silQ" />
                 </div>
                 <span class="text-[10px] text-[#ff3131]">OP_01</span>
             </div>
-            <button onclick="window.location.href='dashboard.html'" class="text-[#007070] hover:bg-[#1C1B1B] hover:text-[#FFFFFF] py-4 flex flex-col items-center gap-1 transition-transform">
+            <button onclick="window.location.href='dashboard.html'"
+                class="text-[#007070] hover:bg-[#1C1B1B] hover:text-[#FFFFFF] py-4 flex flex-col items-center gap-1 transition-transform">
                 <span class="material-symbols-outlined">terminal</span>
                 <span class="text-[9px]">TERM</span>
             </button>
-            <button class="bg-[#ff3131] text-[#050505] shadow-[0_0_10px_#ff3131] py-4 flex flex-col items-center gap-1 transition-transform">
+            <button
+                class="bg-[#ff3131] text-[#050505] shadow-[0_0_10px_#ff3131] py-4 flex flex-col items-center gap-1 transition-transform">
                 <span class="material-symbols-outlined">favorite</span>
                 <span class="text-[9px]">HEALTH</span>
             </button>
         </div>
-        <button onclick="logout()" class="text-[#007070] hover:bg-[#93000a]/20 hover:text-error py-4 flex flex-col items-center gap-1 transition-transform">
+        <button onclick="logout()"
+            class="text-[#007070] hover:bg-[#93000a]/20 hover:text-error py-4 flex flex-col items-center gap-1 transition-transform">
             <span class="material-symbols-outlined">logout</span>
             <span class="text-[9px]">EXIT</span>
         </button>
     </aside>
 
     <main class="ml-20 mt-16 p-4 h-[calc(100vh-64px)] grid grid-cols-12 grid-rows-12 gap-4">
-        
+
         <!-- PANEL 1: ACTIVE HEALTH MONITOR (DATA TABLE) -->
-        <section class="col-span-12 lg:col-span-6 row-span-7 relative cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+        <section
+            class="col-span-12 lg:col-span-6 row-span-7 relative cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
             <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-black text-sm">health_and_safety</span>
@@ -82,7 +92,8 @@
                 </div>
             </div>
             <!-- Header Row -->
-            <div class="grid grid-cols-5 bg-[#1C1B1B] text-[#ff3131]/70 text-[9px] uppercase tracking-widest font-black px-4 py-2 border-b border-[#ff3131]/30">
+            <div
+                class="grid grid-cols-5 bg-[#1C1B1B] text-[#ff3131]/70 text-[9px] uppercase tracking-widest font-black px-4 py-2 border-b border-[#ff3131]/30">
                 <div>NODE_ID</div>
                 <div>LATENCY</div>
                 <div>QUARANTINE_STATUS</div>
@@ -96,26 +107,42 @@
         </section>
 
         <!-- PANEL 2: INFRASTRUCTURE GRID (VISUAL MONITOR) -->
-        <section class="col-span-12 lg:col-span-6 row-span-7 relative cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+        <section
+            class="col-span-12 lg:col-span-6 row-span-7 relative cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
             <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-black text-sm">grid_view</span>
                     <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;INFRASTRUCTURE_GRID</h3>
                 </div>
                 <div class="flex gap-4 text-[10px] items-center text-black font-black">
-                    <div class="flex items-center gap-1"><div class="w-2 h-2 bg-[#00FBFB]"></div> OPERATIONAL</div>
-                    <div class="flex items-center gap-1"><div class="w-2 h-2 border border-black bg-[#f97316]"></div> INFECTED</div>
-                    <div class="flex items-center gap-1"><div class="w-2 h-2 border border-black bg-[#991b1b]"></div> QUARANTINE</div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-2 h-2 bg-[#00FBFB]"></div> OPERATIONAL
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-2 h-2 border border-black bg-[#f97316]"></div> INFECTED
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-2 h-2 border border-black bg-[#991b1b]"></div> QUARANTINE
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-2 h-2 border border-black bg-[#eab308]"></div> JITTER
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-2 h-2 border border-black bg-[#a855f7]"></div> DECEPTIVE
+                    </div>
                 </div>
             </div>
-            <div class="flex-grow relative bg-[#151515] p-3 flex flex-col justify-between items-center" id="nodeGridContainer">
-                
+            <div class="flex-grow relative bg-[#151515] p-3 flex flex-col justify-between items-center"
+                id="nodeGridContainer">
+
                 <!-- 500 Node Distributed Grid Layer -->
-                <div id="healthGrid" class="grid gap-[1px] bg-[#111] p-[1px] border border-black w-full flex-grow h-0" style="grid-template-columns: repeat(25, minmax(0, 1fr)); grid-template-rows: repeat(20, minmax(0, 1fr));">
+                <div id="healthGrid" class="grid gap-[1px] bg-[#111] p-[1px] border border-black w-full flex-grow h-0"
+                    style="grid-template-columns: repeat(25, minmax(0, 1fr)); grid-template-rows: repeat(20, minmax(0, 1fr));">
                     <!-- JS will recursively push exactly 500 individual node boxes here -->
                 </div>
-                
-                <div class="w-full flex justify-between items-center text-[#ff3131]/60 text-[9px] mt-2 mb-1 tracking-widest uppercase font-mono px-1">
+
+                <div
+                    class="w-full flex justify-between items-center text-[#ff3131]/60 text-[9px] mt-2 mb-1 tracking-widest uppercase font-mono px-1">
                     <div class="flex gap-6">
                         <span>DATA_RES: 25X20</span>
                         <span>ACTIVE_THREADS: 4096</span>
@@ -131,7 +158,8 @@
         </section>
 
         <!-- PANEL 3: INCIDENT ATTACK TIMELINE -->
-        <section class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+        <section
+            class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
             <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-black text-sm">timeline</span>
@@ -139,58 +167,73 @@
                 </div>
             </div>
             <div class="flex-grow p-4 bg-black relative cyber-scrollbar overflow-y-auto" id="timelineContainer">
-                <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: linear-gradient(90deg, #ff3131 1px, transparent 1px); background-size: 50px 100%;"></div>
-                <div class="h-full w-full flex items-center justify-center text-[#ff3131]/30 font-mono text-[10px]">WAITING_FOR_INCIDENT_DATA...</div>
+                <div class="absolute inset-0 opacity-10 pointer-events-none"
+                    style="background-image: linear-gradient(90deg, #ff3131 1px, transparent 1px); background-size: 50px 100%;">
+                </div>
+                <div class="h-full w-full flex items-center justify-center text-[#ff3131]/30 font-mono text-[10px]">
+                    WAITING_FOR_INCIDENT_DATA...</div>
             </div>
         </section>
 
         <!-- PANEL 4: QUARANTINE PROTOCOL LOG -->
-        <section class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+        <section
+            class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
             <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-black text-sm">assignment_late</span>
                     <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;QUARANTINE_LOGS</h3>
                 </div>
             </div>
-            <div class="flex-grow p-4 font-mono text-[11px] leading-tight cyber-scrollbar overflow-y-auto bg-black text-[#ff3131]" id="quarantineLog">
+            <div class="flex-grow p-4 font-mono text-[11px] leading-tight cyber-scrollbar overflow-y-auto bg-black text-[#ff3131]"
+                id="quarantineLog">
                 <div class="mb-1 animate-pulse">>> INITIALIZING_AUTONOMOUS_LOG...</div>
             </div>
         </section>
 
         <!-- PANEL 5: CONTROL HUB (RESPONSE SIMULATOR) -->
-        <section class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
+        <section
+            class="col-span-12 lg:col-span-4 row-span-5 cyber-border bg-surface-container-lowest flex flex-col overflow-hidden border-[#ff3131]/30">
             <div class="bg-[#ff3131] px-3 py-1 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-black text-sm">tune</span>
                     <h3 class="text-black font-bold text-xs uppercase tracking-widest">&gt;CONTROL_HUB</h3>
                 </div>
             </div>
-            <div class="flex-grow p-6 bg-[#0E0E0E] flex flex-col gap-6 font-mono justify-center">
+            <div class="flex-grow p-4 bg-[#0E0E0E] flex flex-col gap-4 font-mono justify-center">
                 <div class="space-y-4">
                     <div class="flex justify-between text-[11px] text-[#ff3131]">
                         <span>ATTACK_INTENSITY_THRESHOLD</span>
                         <span id="thresholdVal">50%</span>
                     </div>
-                    <input type="range" class="w-full accent-[#ff3131] bg-[#1C1B1B]" min="0" max="100" value="50" id="thresholdSlider">
+                    <input type="range" class="w-full accent-[#ff3131] bg-[#1C1B1B]" min="0" max="100" value="50"
+                        id="thresholdSlider">
                 </div>
-                
-                <div class="flex flex-col gap-3">
-                    <button onclick="injectMockStress('LATENCY')" class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-[10px] font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all uppercase tracking-widest">INJECT_LATENCY_JITTER</button>
-                    <button onclick="injectMockStress('DECEPTION')" class="w-full border border-[#ff3131] text-[#ff3131] py-3 text-[10px] font-bold hover:bg-[#ff3131]/10 active:scale-95 transition-all uppercase tracking-widest">SIMULATE_DECEPTIVE_TRAFFIC</button>
-                    <button class="w-full bg-[#ff3131] text-black py-4 text-xs font-black hover:brightness-125 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,49,49,0.4)] uppercase tracking-tighter">ENGAGE_FULL_QUARANTINE</button>
+
+                <div class="flex flex-col gap-2">
+                    <button id="btn-LATENCY" onclick="toggleSimulator('LATENCY')"
+                        class="w-full border py-2.5 text-[10px] font-bold active:scale-95 transition-all uppercase tracking-widest"
+                        style="border-color: #eab308; color: #eab308;">INJECT_LATENCY_JITTER</button>
+                    <button id="btn-DECEPTION" onclick="toggleSimulator('DECEPTION')"
+                        class="w-full border py-2.5 text-[10px] font-bold active:scale-95 transition-all uppercase tracking-widest"
+                        style="border-color: #a855f7; color: #a855f7;">SIMULATE_DECEPTIVE_TRAFFIC</button>
+                    <button onclick="engageFullQuarantine()"
+                        class="w-full bg-[#ff3131] text-black py-3 text-xs font-black hover:brightness-125 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,49,49,0.4)] uppercase tracking-tighter">ENGAGE_FULL_QUARANTINE</button>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer class="fixed bottom-0 left-0 w-full h-6 bg-black z-50 flex items-center px-6 justify-between border-t border-[#ff3131]/10 pointer-events-none">
+    <footer
+        class="fixed bottom-0 left-0 w-full h-6 bg-black z-50 flex items-center px-6 justify-between border-t border-[#ff3131]/10 pointer-events-none">
         <div class="text-[9px] text-[#ff3131]/50 tracking-widest font-mono">
             MISSION: ROUND_2 | <span class="text-[#ff3131]">AUTONOMOUS_MODE_ENGAGED</span>
         </div>
     </footer>
 
     <!-- Holographic Node Tooltip (Synced with Health Grid) -->
-    <div id="nodeTooltip" class="decoding-tooltip" style="visibility: hidden; font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 150px; line-height: 1.4;"></div>
+    <div id="nodeTooltip" class="decoding-tooltip"
+        style="visibility: hidden; font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 150px; line-height: 1.4;">
+    </div>
 
     <script src="auth.js"></script>
     <script src="autonomous.js"></script>

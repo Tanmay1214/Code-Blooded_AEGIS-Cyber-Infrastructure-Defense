@@ -471,7 +471,7 @@ async def inject_threat(
         node_id=payload.node_id,
         log_id=new_log.log_id,
         anomaly_score=raw_score,
-        detector="ThreatSimulator"
+        detector=f"Sim:{payload.threat_type}"
     )
     session.add(anomaly_record)
     

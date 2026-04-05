@@ -15,6 +15,8 @@ let isFirstLoad = true;
 let anomalies = []; // Real anomaly stream
 window.globalThreshold = 0.5; // Default 50%
 window.liveNodeScores = {}; // Real-time pulse overlay for Grid
+window.liveNodeDetectors = {}; // Tracks anomaly sources (e.g. ThreatSimulator)
+window.activeSimulators = { LATENCY: false, DECEPTION: false };
 
 // 1. Graphical Grid Initialization (Replaces Map Tracking)
 function initHealthGrid() {
@@ -136,6 +138,7 @@ async function streamLiveTelemetry() {
             // Map real-time scores for fast grid painting
             logs.forEach(l => {
                 window.liveNodeScores[l.node_id] = l.threat_score;
+                window.liveNodeDetectors[l.node_id] = l.detector;
             });
             
             // Feed the timeline and protocol log directly with the raw pulse data
@@ -168,35 +171,46 @@ function renderActiveHealthList() {
     nodes.forEach((node, idx) => {
         // Prevent 0.0% "dead" nodes by injecting baseline network noise (2.0% - 5.9%)
         const realScore = window.liveNodeScores[node.id] || node.threat_score || 0.0;
+        const detector = window.liveNodeDetectors[node.id] || '';
+        const isLatency = detector === 'Sim:LATENCY';
+        const isDeception = detector === 'Sim:DECEPTION';
+        const isSimulator = isLatency || isDeception;
+        const simColor = isLatency ? '#eab308' : '#a855f7';
+        
         const baselineNoise = ((node.id * 17) % 40) / 1000 + 0.02;
         const displayScore = realScore === 0.0 ? baselineNoise : realScore;
         const scorePct = (displayScore * 100).toFixed(1);
         
         let status = "OPERATIONAL";
-        let statusColor = "text-white/50";
+        let mainColor = '#00fbfb';
+        let isThreat = false;
         
-        if (node.is_quarantined || realScore > window.globalThreshold) {
+        if (isSimulator) {
+            status = isLatency ? "STATUS_JITTER" : "DECEPTIVE_TRAFFIC";
+            mainColor = simColor;
+            isThreat = true;
+        } else if (node.is_quarantined || realScore > window.globalThreshold) {
             status = "QUARANTINED";
-            statusColor = "text-[#ff3131]";
+            mainColor = '#ff3131';
+            isThreat = true;
         } else if (node.is_infected || realScore > 0.3) {
             status = "INFECTED";
-            statusColor = "text-[#f97316]";
+            mainColor = '#f97316';
+            isThreat = true;
         }
+        
+        const scoreColor = isSimulator ? simColor : (realScore > 0.3 ? '#ff3131' : '#00fbfb');
+        const reasonColor = isSimulator ? simColor : (isThreat ? '#ff3131' : '#00fbfb');
         
         const row = document.createElement('div');
         row.className = "grid grid-cols-5 text-[10px] font-mono px-4 py-3 border-b border-[#ff3131]/10 hover:bg-[#ff3131]/5 items-center transition-colors";
-        
-        // Dynamic Color Logic for "Mixture of Red and Cyan"
-        const isThreat = (status !== 'OPERATIONAL');
-        const mainColor = isThreat ? '#ff3131' : '#00fbfb';
-        const scoreColor = realScore > 0.3 ? '#ff3131' : '#00fbfb';
         
         row.innerHTML = `
             <div class="font-[900]" style="color: #00fbfb;">NODE_${node.id}</div>
             <div class="text-[9px]" style="color: #00fbfb; opacity: 0.8;">RT=${node.last_http_code === 200 ? Math.floor(Math.random()*(300-50)+50) : 0}ms</div>
             <div class="font-[900] tracking-widest uppercase" style="color: ${mainColor};">${status}</div>
             <div class="font-[900]" style="color: ${scoreColor};">${scorePct}%</div>
-            <div class="truncate text-[9px] uppercase" style="color: ${isThreat ? '#ff3131' : '#00fbfb'}; opacity: 0.6;">${node.quarantine_reason || (status !== 'OPERATIONAL' ? 'THREAT_THRESHOLD_EXCEEDED' : '---')}</div>
+            <div class="truncate text-[9px] uppercase" style="color: ${reasonColor}; opacity: 0.6;">${node.quarantine_reason || (status !== 'OPERATIONAL' ? (isSimulator ? 'SIMULATOR_OVERRIDE_ACTIVE' : 'THREAT_THRESHOLD_EXCEEDED') : '---')}</div>
         `;
         listContainer.appendChild(row);
     });
@@ -207,18 +221,20 @@ function renderActiveHealthList() {
 
 // 3B. Tactical UI Update (Anvay & Tanmay Hub)
 function updateTacticalUI() {
-    if (!dashboardData) return;
+    if (!dashboardData || !dashboardData.metadata) return;
+    
+    const threatCount = dashboardData.metadata.active_threats || 0;
+    const totalAnomalies = dashboardData.metadata.total_anomalies || 0;
+    const criticalNodes = (dashboardData.heatmap || []).filter(h => h.risk_level === 'CRITICAL');
     
     // Update Header Threat Stats (Dashboard Sync)
     const headerThreats = document.getElementById('headerThreats');
     if (headerThreats) {
-        const activeBreaches = (dashboardData.anomalies || []).filter(a => a.status !== 'RESOLVED').length;
-        headerThreats.innerText = `>AEGIS_CORE v4.2 [THREATS: ${activeBreaches}]`;
-        headerThreats.dataset.val = activeBreaches;
+        headerThreats.dataset.val = totalAnomalies;
         
         const tooltip = document.querySelector('.threat-tooltip');
         if (tooltip) {
-            tooltip.innerText = `${activeBreaches} Active Breaches | ${dashboardData.stats?.avg_latency?.toFixed(2) || 0}ms Latency`;
+            tooltip.innerText = `${threatCount} Infected Nodes | ${criticalNodes.length} Latency Spikes`;
         }
     }
 
@@ -342,6 +358,7 @@ if(slider && display) {
         
         // Wipe local telemetry radar cache immediately
         window.liveNodeScores = {};
+        window.liveNodeDetectors = {};
         
         // Force-clear the node health monitor cache to 'OPERATIONAL' baseline
         if (dashboardData && dashboardData.nodes) {
@@ -359,47 +376,108 @@ if(slider && display) {
     };
 }
 
-// Real Threat Injection via Team API
-window.injectMockStress = async function(type) {
-    // Determine target node (selected or random)
-    const targetNodeId = window.selectedNodeId || (dashboardData.nodes ? dashboardData.nodes[0].id : 1);
-    const intensity = parseFloat(slider ? slider.value : 50) / 100;
-
-    console.log(`[TANMAY_MISSION] INJECTING_${type} INTO NODE_${targetNodeId} (Intensity: ${slider ? slider.value : 50}%)`);
-
-    try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`${API_BASE}/simulator/inject-threat`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                node_id: targetNodeId,
-                threat_type: type.toUpperCase(),
-                intensity: intensity
-            })
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            flashNotification(`[SUCCESS] ${type} INJECTED: Signal verified by AEGIS Core.`);
+// Real Threat Injection Trigger (Continuous Random Target Engine)
+window.toggleSimulator = function(type) {
+    window.activeSimulators[type] = !window.activeSimulators[type];
+    
+    const themeColor = type === 'LATENCY' ? '#eab308' : '#a855f7';
+    const btn = document.getElementById(`btn-${type}`);
+    
+    if(btn) {
+        if(window.activeSimulators[type]) {
+            btn.style.backgroundColor = `${themeColor}33`; // 20% opacity
+            btn.style.color = '#fff';
+            flashNotification(`[SYSTEM_ENGAGED] Simulator active: ${type}. Striking random nodes.`);
         } else {
-            flashNotification(`[ERROR] Injection Intercepted by Backend Security.`);
+            btn.style.backgroundColor = 'transparent';
+            btn.style.color = themeColor;
+            
+            // Revert changes caused by this specific simulator immediately
+            const targetTag = `Sim:${type}`;
+            Object.keys(window.liveNodeDetectors).forEach(nodeId => {
+                if (window.liveNodeDetectors[nodeId] === targetTag) {
+                    delete window.liveNodeDetectors[nodeId];
+                    delete window.liveNodeScores[nodeId];
+                }
+            });
+            updateHealthGrid();
+            renderActiveHealthList();
+            
+            flashNotification(`[SYSTEM_HALTED] Simulator deactivated: ${type}. Network returning to baseline.`);
         }
-    } catch (error) {
-        console.error("Injection Error:", error);
-        flashNotification(`[CRITICAL] Backend Link Severed.`);
+    }
+}
+
+// Background Task: Fire random bullets from active simulators
+setInterval(async () => {
+    const activeTypes = Object.keys(window.activeSimulators).filter(t => window.activeSimulators[t]);
+    if (activeTypes.length === 0) return;
+    
+    const intensity = parseFloat(slider ? slider.value : 50) / 100;
+    const token = localStorage.getItem('access_token');
+    
+    // For each active threat, launch a random strike
+    for (const type of activeTypes) {
+        const randomTargetId = Math.floor(Math.random() * 500) + 1;
+        
+        try {
+            await fetch(`${API_BASE}/simulator/inject-threat`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    node_id: randomTargetId,
+                    threat_type: type.toUpperCase(),
+                    intensity: intensity
+                })
+            });
+        } catch (error) { }
+    }
+}, 1500);
+
+// Master Override Protocol: Engage Full System Lockdown
+window.engageFullQuarantine = async function() {
+    const slider = document.getElementById('thresholdSlider');
+    const display = document.getElementById('thresholdVal');
+    
+    if (slider && display) {
+        // 1. Instant UI Lock
+        slider.value = 0;
+        display.innerText = "0%";
+        window.globalThreshold = 0;
+        
+        // 2. Wipe client-side radar memory
+        window.liveNodeScores = {};
+        window.liveNodeDetectors = {};
+        if (dashboardData && dashboardData.nodes) {
+            dashboardData.nodes.forEach(n => {
+                n.is_infected = false; 
+                n.is_quarantined = false;
+                n.threat_score = 0.0;
+            });
+            updateHealthGrid();
+            renderActiveHealthList();
+        }
+        
+        // 3. Broadcast lockdown to backend (Background)
+        updateBackendThreshold(0);
+        
+        console.log("[LOCKDOWN] AEGIS_CORE: Full Quarantine Protocol Engaged at 0% Threshold.");
+        flashNotification("[CRITICAL] PROTOCOL_ZERO_ENGAGED: GLOBAL LOCKDOWN ACTIVE.");
     }
 }
 
 function flashNotification(msg) {
     const log = document.getElementById('quarantineLog');
     if(log) {
+        if (log.innerHTML.includes('INITIALIZING')) log.innerHTML = '';
         const entry = document.createElement('div');
-        entry.className = 'mb-1 text-cyan-400 border-b border-cyan-400/10 pb-1 animate-pulse italic';
-        entry.innerHTML = `[MISSION_CONTROL] ${msg}`;
+        entry.className = 'mb-1 border-b border-[#00fbfb]/20 pb-1 italic px-2 animate-pulse';
+        entry.style.color = '#00fbfb';
+        entry.style.opacity = '1';
+        entry.innerHTML = `[SYSTEM_INFO] ${msg}`;
         log.appendChild(entry);
         log.scrollTop = log.scrollHeight;
     }
@@ -420,25 +498,38 @@ function renderQuarantineLog(newLogs) {
         const id = `q-log-${entryData.id}`;
         if (document.getElementById(id)) return;
 
-        const isSimulator = entryData.detector === 'ThreatSimulator';
-        const themeColor = isSimulator ? '#a855f7' : '#ff3131';
+        const isSimulator = entryData.detector.startsWith('Sim:');
+        
+        let themeColor = '#ff3131'; 
+        let logLabel = "UNKNOWN";
+        if (entryData.detector === 'Sim:LATENCY') {
+             themeColor = '#eab308';
+             logLabel = "SIM: LATENCY_JITTER";
+        } else if (entryData.detector === 'Sim:DECEPTION') {
+             themeColor = '#a855f7';
+             logLabel = "SIM: DECEPTIVE_LOGS";
+        }
+        
         const time = new Date(entryData.timestamp).toLocaleTimeString();
         const scorePct = (entryData.threat_score * 100).toFixed(1);
         
         const entry = document.createElement('div');
         entry.id = id;
-        entry.className = `mb-2 border-l-2 pl-3 py-2 animate-slide-in relative`;
+        entry.className = `mb-2 border-l-2 pl-3 py-2 relative opacity-100`;
         entry.style.borderLeftColor = themeColor;
-        entry.style.backgroundColor = `${themeColor}0D`; // 5% opacity hex
+        entry.style.backgroundColor = `${themeColor}1A`; // 10% opacity
         
+        const msgParts = entryData.message.split(' | ');
+        const displayMsg = msgParts.length > 1 ? msgParts[1] : entryData.message;
+
         entry.innerHTML = `
             <div class="flex justify-between items-start mb-1">
-                <div class="text-[9px] uppercase opacity-70 tracking-tighter" style="color: ${themeColor};">[${time}] AUTONOMOUS_LOCKOUT_ENGAGED</div>
+                <div class="text-[9px] uppercase font-bold tracking-tighter" style="color: ${themeColor}; opacity: 0.9;">[${time}] LOCKOUT_ENGAGED</div>
                 <div class="text-[10px] text-black px-1 font-black" style="background-color: ${themeColor};">THREAT: ${scorePct}%</div>
             </div>
-            <div class="font-black text-white text-[11px]">NODE_${entryData.node_id}: QUARANTINE_ACTIVE</div>
-            <div class="text-[10px] mt-1 font-mono" style="color: ${themeColor}E6;">
-                ${isSimulator ? 'SIMULATOR' : 'THE_SWORD'}: Threat intercepted. ${entryData.message.split(' | ')[1]}
+            <div class="font-[900] text-white text-[11px] uppercase tracking-tighter">NODE_${entryData.node_id}: QUARANTINE_ACTIVE</div>
+            <div class="text-[10px] mt-1 font-mono leading-none" style="color: ${themeColor};">
+                ${isSimulator ? logLabel : 'THE_SWORD'}: ${displayMsg}
             </div>
         `;
         log.appendChild(entry);
@@ -463,11 +554,20 @@ function updateHealthGrid() {
 
         // Real-Time Pulse Override Calculation
         const liveScore = window.liveNodeScores[node.id] || 0.0;
+        const detector = window.liveNodeDetectors[node.id] || '';
+        const isLatency = detector === 'Sim:LATENCY';
+        const isDeception = detector === 'Sim:DECEPTION';
+        const isSimulator = isLatency || isDeception;
+        
         let isRed = node.is_quarantined || liveScore > window.globalThreshold;
         let isOrange = node.is_infected || (liveScore > 0.3 && liveScore <= window.globalThreshold);
 
         // Apply grid colors based on dynamic severity tier
-        if (isRed) {
+        if (isLatency) {
+            box.className = 'w-full h-full bg-[#eab308] flex items-center justify-center text-[10px] font-[900] text-black/90 overflow-hidden cursor-crosshair transition-colors duration-200';
+        } else if (isDeception) {
+            box.className = 'w-full h-full bg-[#a855f7] flex items-center justify-center text-[10px] font-[900] text-black/90 overflow-hidden cursor-crosshair transition-colors duration-200';
+        } else if (isRed) {
             box.className = 'w-full h-full bg-[#991b1b] flex items-center justify-center text-[10px] font-[900] text-black/70 overflow-hidden cursor-crosshair transition-colors duration-200';
         } else if (isOrange) {
             box.className = 'w-full h-full bg-[#f97316] flex items-center justify-center text-[10px] font-[900] text-black/70 overflow-hidden cursor-crosshair transition-colors duration-200';
