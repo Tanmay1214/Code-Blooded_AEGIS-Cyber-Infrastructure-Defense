@@ -100,6 +100,7 @@ The "War Room" interface for active threat mitigation.
 - **Attack Timeline**: Real-time visual patterns of breach attempts.
 - **Quarantine Logs**: Audit trail of every automated node lockout.
 - **Control Hub**: Master threshold sliders and Biphasic Threat Simulator toggles.
+![AEGIS Autonomous Dashboard](aegis_backend/assets/screenshots/autonomous.png)
 
 ---
 
